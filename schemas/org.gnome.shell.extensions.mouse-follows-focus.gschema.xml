@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.mouse-follows-focus" path="/org/gnome/shell/extensions/mouse-follows-focus/">
+    <key name="enable-debugging" type="b">
+      <default>false</default>
+      <summary>Debug mode</summary>
+      <description>Enable or disable debug messages in the extension.</description>
+    </key>
+  </schema>
+</schemalist>

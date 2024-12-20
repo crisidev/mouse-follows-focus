@@ -4,9 +4,9 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
-    assignees: [swsnr]
+    assignees: [crisidev]
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "monthly"
-    assignees: [swsnr]
+    assignees: [crisidev]

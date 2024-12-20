@@ -1,4 +1,4 @@
-// Copyright Sebastian Wiesner <sebastian@swsnr.de>
+// Copyright Matteo Bigoi <bigo@crisidev.org>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0.If a copy of the MPL was not distributed with this
@@ -25,7 +25,7 @@ import { ExtensionPreferences } from "resource:///org/gnome/Shell/Extensions/js/
 import AboutPage from "./lib/prefs/about_page.js";
 import GeneralPage from "./lib/prefs/general_page.js";
 
-export default class HelloWorldPreferences extends ExtensionPreferences {
+export default class MouseFollowsFocusPreferences extends ExtensionPreferences {
   override fillPreferencesWindow(
     window: Adw.PreferencesWindow & {
       _settings: Gio.Settings;

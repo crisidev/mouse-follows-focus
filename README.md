@@ -1,3 +1,5 @@
-# GNOME shell extension typescript template
+# GNOME Shell - Mouse Follows Focus
 
-A template for my GNOME shell extensions in Typescript.
+This extension enables mouse-follows-focus on GNOME Shell 45+.
+
+The user experience is meant to be as similar as possible to i3/sway.

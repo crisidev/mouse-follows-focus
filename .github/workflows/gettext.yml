@@ -30,18 +30,18 @@ jobs:
       - run: npm ci
       - run: npm run xgettext
       # Create a pull request to update the messages file
-      - uses: peter-evans/create-pull-request@v7
-        with:
-          commit-message: |
-            Update messages
-
-            Github bot runs make pot :v:
-          branch: workflow/update-messages
-          base: main
-          sign-commits: true
-          delete-branch: true
-          title: "Automated update of messages"
-          body: "Github bot runs make pot :v:"
-          assignees: swsnr
-          draft: true
-          add-paths: po/picture-of-the-day@swsnr.de.pot
+      # - uses: peter-evans/create-pull-request@v7
+      #   with:
+      #     commit-message: |
+      #       Update messages
+      #
+      #       Github bot runs make pot :v:
+      #     branch: workflow/update-messages
+      #     base: main
+      #     sign-commits: true
+      #     delete-branch: true
+      #     title: "Automated update of messages"
+      #     body: "Github bot runs make pot :v:"
+      #     assignees: swsnr
+      #     draft: true
+      #     add-paths: po/picture-of-the-day@swsnr.de.pot

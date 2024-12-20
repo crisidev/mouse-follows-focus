@@ -1,4 +1,4 @@
-// Copyright Sebastian Wiesner <sebastian@swsnr.de>
+// Copyright Matteo Bigoi <bigo@crisidev.org>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0.If a copy of the MPL was not distributed with this
@@ -25,7 +25,7 @@ import { getTemplate } from "./template.js";
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 interface TypescriptTemplateGeneralPage {
-  _sayHello: Adw.SwitchRow;
+  _enableDebugging: Adw.SwitchRow;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
@@ -34,8 +34,8 @@ class TypescriptTemplateGeneralPage extends Adw.PreferencesPage {
     super();
 
     settings.bind(
-      "say-hello",
-      this._sayHello,
+      "enable-debugging",
+      this._enableDebugging,
       "active",
       Gio.SettingsBindFlags.DEFAULT,
     );
@@ -46,7 +46,7 @@ export default GObject.registerClass(
   {
     GTypeName: "TypescriptTemplateGeneralPage",
     Template: getTemplate("GeneralPage"),
-    InternalChildren: ["sayHello"],
+    InternalChildren: ["enableDebugging"],
   },
   TypescriptTemplateGeneralPage,
 );

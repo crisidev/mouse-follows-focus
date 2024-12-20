@@ -16,7 +16,7 @@
     "clean": "rimraf --no-interactive dist build"
   },
   "engines": {
-    "node": ">=23"
+    "node": ">=22"
   },
   "devDependencies": {
     "@girs/gnome-shell": "^47.0.0",
@@ -30,7 +30,7 @@
   "gsebuild": {
     "gettext": {
       "sources": ["ui/*.blp"],
-      "copyright-holder": "Sebastian Wiesner <sebastian@swsnr.de>"
+      "copyright-holder": "Matteo Bigoi <bigo@crisidev.org>"
     },
     "pack": {
       "copy-to-source": ["ui/*.ui"],

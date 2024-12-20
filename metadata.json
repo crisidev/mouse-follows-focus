@@ -1,9 +1,9 @@
 {
-  "name": "gnome-shell-extension-typescript-template",
-  "uuid": "typescript-template@swsnr.de",
-  "description": "Typescript template for GNOME shell extensions",
-  "version-name": "0.0.0",
-  "url": "https://github.com/swsnr/gnome-shell-extension-typescript-template",
-  "shell-version": ["47"],
-  "settings-schema": "org.gnome.shell.extensions.typescript-template"
+  "name": "Mouse Follows Focus",
+  "uuid": "mouse-follows-focus@crisidev.org",
+  "description": "Enable mouse follows focus on Gnome Shell 45+ with multi monitors support",
+  "version-name": "0.0.1",
+  "url": "https://github.com/crisidev/mouse-follows-focus",
+  "shell-version": ["45", "46", "47"],
+  "settings-schema": "org.gnome.shell.extensions.mouse-follows-focus"
 }

@@ -1,4 +1,4 @@
-// Copyright Sebastian Wiesner <sebastian@swsnr.de>
+// Copyright Matteo Bigoi <bigo@crisidev.org>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0.If a copy of the MPL was not distributed with this
@@ -25,7 +25,7 @@ import type { ExtensionMetadata } from "@girs/gnome-shell/extensions/extension";
 
 import { getTemplate } from "./template.js";
 
-const LICENSE = `Copyright Sebastian Wiesner <sebastian@swsnr.de>
+const LICENSE = `Copyright Matteo Bigoi <bigo@crisidev.org>
 
 This programm is subject to the terms of the Mozilla Public
 License, v. 2.0. If a copy of the MPL was not distributed with this
