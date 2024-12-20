@@ -28,15 +28,16 @@ import Clutter from "gi://Clutter";
 
 export default class MouseFollowsFocus extends Extension {
   connectedWindowsSignals = new Map<number, number>();
-  windowCreateSignal: number | null = null;
+  windowCreatedSignal: number | null = null;
   windowHiddenSignal: number | null = null;
-  mouseMotionSignal: number | null = null;
-  mouseMotionTimer: number | null = null;
+  motionEventSignal: number | null = null;
+  motionEventTimer: number | null = null;
   isMouseMoving = false;
 
   override enable(): void {
-    this.debug_log("Enabling extension");
+    this.info_log("Enabling extension");
 
+    this.info_log("Attatching to available windows");
     for (const actor of global.get_window_actors()) {
       if (actor.is_destroyed()) continue;
 
@@ -48,12 +49,15 @@ export default class MouseFollowsFocus extends Extension {
       }
     }
 
-    this.windowCreateSignal = global.display.connect(
+    this.windowCreatedSignal = global.display.connect(
       "window-created",
       (_source, win) => {
         this.debug_log(`Window "${win.get_title()}" created`);
         this.connect_to_window(win);
       },
+    );
+    this.info_log(
+      `Signal window-created started with id ${this.windowCreatedSignal.toString()}`,
     );
 
     /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
@@ -63,17 +67,18 @@ export default class MouseFollowsFocus extends Extension {
       this.focus_changed(win);
     });
     /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
+    this.info_log("Signal window-hidden started");
 
-    this.mouseMotionSignal = global.stage.connect("motion-event", () => {
+    this.motionEventSignal = global.stage.connect("motion-event", () => {
       this.debug_log("Setting mouse movement guard to true");
       this.isMouseMoving = true;
 
-      if (this.mouseMotionTimer) {
+      if (this.motionEventTimer) {
         this.debug_log("Removing mouse movement reset timer");
-        GLib.Source.remove(this.mouseMotionTimer);
+        GLib.Source.remove(this.motionEventTimer);
       }
 
-      this.mouseMotionTimer = GLib.timeout_add(
+      this.motionEventTimer = GLib.timeout_add(
         GLib.PRIORITY_DEFAULT,
         100,
         (): boolean => {
@@ -83,14 +88,19 @@ export default class MouseFollowsFocus extends Extension {
         },
       );
     });
+    this.info_log(
+      `Signal motion-event started with id ${this.motionEventSignal.toString()}`,
+    );
+    this.debug_log("Extension enabled");
   }
 
   override disable(): void {
     this.debug_log("Disabling extension");
 
-    if (this.windowCreateSignal) {
-      global.display.disconnect(this.windowCreateSignal);
-      this.windowCreateSignal = null;
+    if (this.windowCreatedSignal) {
+      global.display.disconnect(this.windowCreatedSignal);
+      this.windowCreatedSignal = null;
+      this.info_log("Signal window-created disconnected");
     }
 
     if (this.windowHiddenSignal) {
@@ -98,16 +108,18 @@ export default class MouseFollowsFocus extends Extension {
       overview.disconnect(this.windowHiddenSignal);
       /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
       this.windowHiddenSignal = null;
+      this.info_log("Signal window-hidden disconnected");
     }
 
-    if (this.mouseMotionSignal) {
-      global.stage.disconnect(this.mouseMotionSignal);
-      this.mouseMotionSignal = null;
+    if (this.motionEventSignal) {
+      global.stage.disconnect(this.motionEventSignal);
+      this.motionEventSignal = null;
+      this.info_log("Signal motion-event disconnected");
     }
 
-    if (this.mouseMotionTimer) {
-      GLib.Source.remove(this.mouseMotionTimer);
-      this.mouseMotionTimer = null;
+    if (this.motionEventTimer) {
+      GLib.Source.remove(this.motionEventTimer);
+      this.motionEventTimer = null;
     }
 
     for (const actor of global.get_window_actors()) {
@@ -115,19 +127,27 @@ export default class MouseFollowsFocus extends Extension {
 
       const win = actor.get_meta_window();
       if (win) {
-        const connectedWindow = this.connectedWindowsSignals.get(win.get_id());
-        if (connectedWindow) {
-          win.disconnect(connectedWindow);
+        const connectedWindowSignal = this.connectedWindowsSignals.get(
+          win.get_id(),
+        );
+        if (connectedWindowSignal) {
+          win.disconnect(connectedWindowSignal);
           this.connectedWindowsSignals.delete(win.get_id());
         }
       }
     }
+    this.info_log("Detatched to available windows");
+    this.debug_log("Extension disabled");
   }
 
   debug_log(message: string): void {
     if (this.getSettings().get_boolean("enable-debugging")) {
-      console.log(`[${this.metadata.name}]: ${message}`);
+      console.log(`[${this.metadata.name}] DEBUG ${message}`);
     }
+  }
+
+  info_log(message: string): void {
+    console.log(`[${this.metadata.name}] INFO  ${message}`);
   }
 
   connect_to_window(win: Meta.Window): void {
