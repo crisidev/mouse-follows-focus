@@ -22,16 +22,19 @@
 import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
 import { overview } from "resource:///org/gnome/shell/ui/main.js";
 import Meta from "gi://Meta";
-import GLib from 'gi://GLib';
+import GLib from "gi://GLib";
+import Mtk from "gi://Mtk";
+import Clutter from "gi://Clutter";
 
 export default class MouseFollowsFocus extends Extension {
   settingsDebug = false;
-  connectedWindowsSignals: { [id: number]: number } = {};
+  settingsMinimumSize = 10;
+  connectedWindowsSignals = new Map<number, number>();
   windowCreateSignal: number | null = null;
   windowHiddenSignal: number | null = null;
   mouseMotionSignal: number | null = null;
   mouseMotionTimer: number | null = null;
-  isMouseMoving =false;
+  isMouseMoving = false;
 
   override enable(): void {
     const settings = this.getSettings();
@@ -49,16 +52,21 @@ export default class MouseFollowsFocus extends Extension {
       }
     }
 
-    this.windowCreateSignal = global.display.connect("window-created", (_source, win) => {
-      this.debug_log(`Window "${win.get_title()}" created`);
-      this.connect_to_window(win);
-    });
+    this.windowCreateSignal = global.display.connect(
+      "window-created",
+      (_source, win) => {
+        this.debug_log(`Window "${win.get_title()}" created`);
+        this.connect_to_window(win);
+      },
+    );
 
+    /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
     this.windowHiddenSignal = overview.connect("hidden", () => {
       const win = global.display.focus_window;
-      this.debug_log(`Window "${win}" hidden`);
+      this.debug_log(`Window "${win.get_title()}" hidden`);
       this.focus_changed(win);
     });
+    /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 
     this.mouseMotionSignal = global.stage.connect("motion-event", () => {
       this.debug_log("Setting mouse movement guard to true");
@@ -69,11 +77,15 @@ export default class MouseFollowsFocus extends Extension {
         GLib.Source.remove(this.mouseMotionTimer);
       }
 
-      this.mouseMotionTimer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, (): boolean => {
-        this.debug_log("Setting mouse movement guard to false after timeout");
-        this.isMouseMoving = false;
-        return false;
-      });
+      this.mouseMotionTimer = GLib.timeout_add(
+        GLib.PRIORITY_DEFAULT,
+        100,
+        (): boolean => {
+          this.debug_log("Setting mouse movement guard to false after timeout");
+          this.isMouseMoving = false;
+          return false;
+        },
+      );
     });
   }
 
@@ -86,7 +98,9 @@ export default class MouseFollowsFocus extends Extension {
     }
 
     if (this.windowHiddenSignal) {
+      /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
       overview.disconnect(this.windowHiddenSignal);
+      /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
       this.windowHiddenSignal = null;
     }
 
@@ -102,13 +116,13 @@ export default class MouseFollowsFocus extends Extension {
 
     for (const actor of global.get_window_actors()) {
       if (actor.is_destroyed()) continue;
-      
+
       const win = actor.get_meta_window();
       if (win) {
-        const connectedWindow = this.connectedWindowsSignals[win.get_id()];
+        const connectedWindow = this.connectedWindowsSignals.get(win.get_id());
         if (connectedWindow) {
           win.disconnect(connectedWindow);
-          delete this.connectedWindowsSignals[win.get_id()];
+          this.connectedWindowsSignals.delete(win.get_id());
         }
       }
     }
@@ -122,15 +136,105 @@ export default class MouseFollowsFocus extends Extension {
 
   connect_to_window(win: Meta.Window): void {
     const windowType = win.get_window_type();
-    if (windowType != Meta.WindowType.NORMAL) {
-      this.debug_log(`Ignoring non normal window type ${windowType}`);
+    if (windowType !== Meta.WindowType.NORMAL) {
+      this.debug_log(
+        `Ignoring non normal window type ${windowType.toString()}`,
+      );
       return;
     }
 
-    this.connectedWindowsSignals[win.get_id()] = win.connect("focus", () => this.focus_changed(win));
+    this.connectedWindowsSignals.set(
+      win.get_id(),
+      win.connect("focus", () => {
+        this.focus_changed(win);
+      }),
+    );
   }
 
-  focus_changed(_: Meta.Window): void {
+  get_window_actor(win: Meta.Window): Meta.WindowActor | undefined {
+    return global
+      .get_window_actors()
+      .find(
+        (actor) => !actor.is_destroyed() && actor.get_meta_window() === win,
+      );
+  }
 
+  cursor_within_window(
+    mouseX: number,
+    mouseY: number,
+    windowRectangle: Mtk.Rectangle,
+  ): boolean {
+    return (
+      mouseX >= windowRectangle.x &&
+      mouseX <= windowRectangle.x + windowRectangle.width &&
+      mouseY >= windowRectangle.y &&
+      mouseY <= windowRectangle.y + windowRectangle.height
+    );
+  }
+
+  warp_pointer(windowRectangle: Mtk.Rectangle): void {
+    Clutter.get_default_backend()
+      .get_default_seat()
+      .warp_pointer(
+        windowRectangle.x + windowRectangle.width / 2,
+        windowRectangle.y + windowRectangle.height / 2,
+      );
+  }
+
+  focus_changed(win: Meta.Window): void {
+    this.debug_log(`Focus changed to "${win.get_title()}"`);
+
+    if (this.isMouseMoving) {
+      this.debug_log("Focus change skipped due to mouse movement");
+      return;
+    }
+
+    const actor = this.get_window_actor(win);
+    if (!actor) {
+      this.debug_log("Focus change skipped due to invalid window actor");
+      return;
+    }
+
+    if (win.is_floating()) {
+      this.debug_log(
+        `Focus change skipped due to floating windown "${win.get_title()}" already focused`,
+      );
+      return;
+    }
+
+    const windowRectangle = win.get_buffer_rect();
+    const [mouseX, mouseY] = global.get_pointer();
+    const sourceMonitorIndex = global.display.get_monitor_index_for_rect(
+      new Mtk.Rectangle({ x: mouseX, y: mouseY, width: 1, height: 1 }),
+    );
+    const destinationMonitorIndex = global.display.get_monitor_index_for_rect(
+      new Mtk.Rectangle({
+        x: windowRectangle.x,
+        y: windowRectangle.y,
+        width: windowRectangle.width,
+        height: windowRectangle.height,
+      }),
+    );
+
+    if (sourceMonitorIndex !== destinationMonitorIndex) {
+      this.debug_log("Focus switched to a different monitor");
+      this.warp_pointer(windowRectangle);
+      return;
+    }
+
+    if (this.cursor_within_window(mouseX, mouseY, windowRectangle)) {
+      this.debug_log("Pointer within window, ignoring event.");
+      /* eslint-disable @typescript-eslint/no-unsafe-member-access */
+    } else if (overview.visible) {
+      /* eslint-enable @typescript-eslint/no-unsafe-member-access */
+      this.debug_log("Overview visible, ignoring event.");
+    } else if (
+      windowRectangle.width < this.settingsMinimumSize &&
+      windowRectangle.height < this.settingsMinimumSize
+    ) {
+      this.debug_log("Window too small, ignoring event.");
+    } else {
+      this.warp_pointer(windowRectangle);
+    }
   }
 }
