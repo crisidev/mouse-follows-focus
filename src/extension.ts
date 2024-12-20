@@ -27,8 +27,6 @@ import Mtk from "gi://Mtk";
 import Clutter from "gi://Clutter";
 
 export default class MouseFollowsFocus extends Extension {
-  settingsDebug = false;
-  settingsMinimumSizeTrigger = 10;
   connectedWindowsSignals = new Map<number, number>();
   windowCreateSignal: number | null = null;
   windowHiddenSignal: number | null = null;
@@ -37,8 +35,6 @@ export default class MouseFollowsFocus extends Extension {
   isMouseMoving = false;
 
   override enable(): void {
-    const settings = this.getSettings();
-    this.settingsDebug = settings.get_boolean("enable-debugging");
     this.debug_log("Enabling extension");
 
     for (const actor of global.get_window_actors()) {
@@ -129,7 +125,7 @@ export default class MouseFollowsFocus extends Extension {
   }
 
   debug_log(message: string): void {
-    if (this.settingsDebug) {
+    if (this.getSettings().get_boolean("enable-debugging")) {
       console.log(`[${this.metadata.name}]: ${message}`);
     }
   }
@@ -222,6 +218,9 @@ export default class MouseFollowsFocus extends Extension {
       return;
     }
 
+    const minimumSizeTrigger = this.getSettings().get_int(
+      "minimum-size-trigger",
+    );
     if (this.cursor_within_window(mouseX, mouseY, windowRectangle)) {
       this.debug_log("Pointer within window, ignoring event.");
       /* eslint-disable @typescript-eslint/no-unsafe-member-access */
@@ -229,8 +228,8 @@ export default class MouseFollowsFocus extends Extension {
       /* eslint-enable @typescript-eslint/no-unsafe-member-access */
       this.debug_log("Overview visible, ignoring event.");
     } else if (
-      windowRectangle.width < this.settingsMinimumSizeTrigger &&
-      windowRectangle.height < this.settingsMinimumSizeTrigger
+      windowRectangle.width < minimumSizeTrigger &&
+      windowRectangle.height < minimumSizeTrigger
     ) {
       this.debug_log("Window too small, ignoring event.");
     } else {

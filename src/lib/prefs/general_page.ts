@@ -26,7 +26,6 @@ import { getTemplate } from "./template.js";
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 interface TypescriptTemplateGeneralPage {
   _enableDebugging: Adw.SwitchRow;
-  _minimumSizeTrigger: Adw.SwitchRow;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
@@ -40,12 +39,6 @@ class TypescriptTemplateGeneralPage extends Adw.PreferencesPage {
       "active",
       Gio.SettingsBindFlags.DEFAULT,
     );
-    settings.bind(
-      "minimum-size-trigger",
-      this._minimumSizeTrigger,
-      "active",
-      Gio.SettingsBindFlags.DEFAULT,
-    );
   }
 }
 
@@ -53,7 +46,7 @@ export default GObject.registerClass(
   {
     GTypeName: "TypescriptTemplateGeneralPage",
     Template: getTemplate("GeneralPage"),
-    InternalChildren: ["enableDebugging", "minimumSizeTrigger"],
+    InternalChildren: ["enableDebugging"],
   },
   TypescriptTemplateGeneralPage,
 );

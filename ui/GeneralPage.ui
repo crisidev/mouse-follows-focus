@@ -19,15 +19,5 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
         </child>
       </object>
     </child>
-    <child>
-      <object class="AdwPreferencesGroup">
-        <child>
-          <object class="AdwSwitchRow" id="minimumSizeTrigger">
-            <property name="title" translatable="true">Minimum window size trigger</property>
-            <property name="subtitle" translatable="true">Minimum window size (NxN) triggering mouse-follows-focus events</property>
-          </object>
-        </child>
-      </object>
-    </child>
   </template>
 </interface>
