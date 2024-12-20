@@ -11,4 +11,11 @@ template $TypescriptTemplateGeneralPage : Adw.PreferencesPage {
             subtitle: _("Whether to enable debugging logs");
         }
     }
+
+    Adw.PreferencesGroup {
+        Adw.SwitchRow minimumSizeTrigger {
+            title: _("Minimum window size trigger");
+            subtitle: _("Minimum window size (NxN) triggering mouse-follows-focus events");
+        }
+    }
 }

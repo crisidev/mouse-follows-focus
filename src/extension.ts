@@ -28,7 +28,7 @@ import Clutter from "gi://Clutter";
 
 export default class MouseFollowsFocus extends Extension {
   settingsDebug = false;
-  settingsMinimumSize = 10;
+  settingsMinimumSizeTrigger = 10;
   connectedWindowsSignals = new Map<number, number>();
   windowCreateSignal: number | null = null;
   windowHiddenSignal: number | null = null;
@@ -229,8 +229,8 @@ export default class MouseFollowsFocus extends Extension {
       /* eslint-enable @typescript-eslint/no-unsafe-member-access */
       this.debug_log("Overview visible, ignoring event.");
     } else if (
-      windowRectangle.width < this.settingsMinimumSize &&
-      windowRectangle.height < this.settingsMinimumSize
+      windowRectangle.width < this.settingsMinimumSizeTrigger &&
+      windowRectangle.height < this.settingsMinimumSizeTrigger
     ) {
       this.debug_log("Window too small, ignoring event.");
     } else {

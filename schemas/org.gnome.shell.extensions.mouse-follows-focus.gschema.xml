@@ -6,5 +6,10 @@
       <summary>Debug mode</summary>
       <description>Enable or disable debug messages in the extension.</description>
     </key>
+    <key name="minimum-size-trigger" type="n">
+      <default>10</default>
+      <summary>Minimum window size trigger</summary>
+      <description>Minimum window size (NxN) triggering mouse-follows-focus events.</description>
+    </key>
   </schema>
 </schemalist>
