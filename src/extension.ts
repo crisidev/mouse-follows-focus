@@ -63,8 +63,12 @@ export default class MouseFollowsFocus extends Extension {
     /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
     this.windowHiddenSignal = overview.connect("hidden", () => {
       const win = global.display.focus_window;
-      this.debug_log(`Window "${win.get_title()}" hidden`);
-      this.focus_changed(win);
+      /* eslint-disable @typescript-eslint/no-unnecessary-condition */
+      if (win) {
+        /* eslint-enable @typescript-eslint/no-unnecessary-condition */
+        this.debug_log(`Window "${win.get_title()}" hidden`);
+        this.focus_changed(win);
+      }
     });
     /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
     this.info_log("Signal window-hidden started");
@@ -78,11 +82,17 @@ export default class MouseFollowsFocus extends Extension {
         GLib.Source.remove(this.motionEventTimer);
       }
 
+      const motionEventTimeout = this.getSettings().get_int(
+        "motion-event-timeout",
+      );
+
       this.motionEventTimer = GLib.timeout_add(
         GLib.PRIORITY_DEFAULT,
-        100,
+        motionEventTimeout,
         (): boolean => {
-          this.debug_log("Setting mouse movement guard to false after timeout");
+          this.debug_log(
+            `Setting mouse movement guard to false after timeout of ${motionEventTimeout.toString()}`,
+          );
           this.isMouseMoving = false;
           return false;
         },
@@ -197,7 +207,12 @@ export default class MouseFollowsFocus extends Extension {
       );
   }
 
-  focus_changed(win: Meta.Window): void {
+  focus_changed(win: Meta.Window | null): void {
+    if (!win) {
+      this.debug_log("Focus change skipped due to empty window object");
+      return;
+    }
+
     this.debug_log(`Focus changed to "${win.get_title()}"`);
 
     if (this.isMouseMoving) {

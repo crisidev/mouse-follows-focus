@@ -11,5 +11,11 @@
       <summary>Minimum window size trigger</summary>
       <description>Minimum window size (NxN) triggering mouse-follows-focus events.</description>
     </key>
+    <key name="motion-event-timeout" type="i">
+      <default>100</default>
+      <summary>Motion event timeout (ms)</summary>
+      <description>How long before resetting the mouse motion event detection timeout.</description>
+    </key>
+
   </schema>
 </schemalist>

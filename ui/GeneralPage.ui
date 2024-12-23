@@ -17,6 +17,50 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
             <property name="subtitle" translatable="true">Whether to enable debugging logs</property>
           </object>
         </child>
+        <child>
+          <object class="AdwActionRow">
+            <property name="title" translatable="true">Minimum Window Size Trigger</property>
+            <property name="subtitle" translatable="true">Minimum window size (NxN) triggering mouse-follows-focus events</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">0</property>
+                <child>
+                  <object class="GtkSpinButton">
+                    <property name="adjustment">
+                      <object class="GtkAdjustment" id="minimumSizeTrigger">
+                        <property name="lower">0</property>
+                        <property name="upper">1000</property>
+                        <property name="step-increment">1</property>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="AdwActionRow">
+            <property name="title" translatable="true">Motion Event Timeout Milliseconds</property>
+            <property name="subtitle" translatable="true">How long before resetting the mouse motion event detection timeout</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">0</property>
+                <child>
+                  <object class="GtkSpinButton">
+                    <property name="adjustment">
+                      <object class="GtkAdjustment" id="motionEventTimeout">
+                        <property name="lower">0</property>
+                        <property name="upper">10000</property>
+                        <property name="step-increment">1</property>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
       </object>
     </child>
   </template>

@@ -19,6 +19,7 @@
 
 import GObject from "gi://GObject";
 import Gio from "gi://Gio";
+import Gtk from "gi://Gtk";
 import Adw from "gi://Adw";
 
 import { getTemplate } from "./template.js";
@@ -26,6 +27,8 @@ import { getTemplate } from "./template.js";
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 interface TypescriptTemplateGeneralPage {
   _enableDebugging: Adw.SwitchRow;
+  _minimumSizeTrigger: Gtk.SpinButton;
+  _motionEventTimeout: Gtk.SpinButton;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
@@ -39,6 +42,20 @@ class TypescriptTemplateGeneralPage extends Adw.PreferencesPage {
       "active",
       Gio.SettingsBindFlags.DEFAULT,
     );
+
+    settings.bind(
+      "minimum-size-trigger",
+      this._minimumSizeTrigger,
+      "value",
+      Gio.SettingsBindFlags.DEFAULT,
+    );
+
+    settings.bind(
+      "motion-event-timeout",
+      this._motionEventTimeout,
+      "value",
+      Gio.SettingsBindFlags.DEFAULT,
+    );
   }
 }
 
@@ -46,7 +63,11 @@ export default GObject.registerClass(
   {
     GTypeName: "TypescriptTemplateGeneralPage",
     Template: getTemplate("GeneralPage"),
-    InternalChildren: ["enableDebugging"],
+    InternalChildren: [
+      "enableDebugging",
+      "minimumSizeTrigger",
+      "motionEventTimeout",
+    ],
   },
   TypescriptTemplateGeneralPage,
 );

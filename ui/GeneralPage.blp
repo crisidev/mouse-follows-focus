@@ -10,5 +10,37 @@ template $TypescriptTemplateGeneralPage : Adw.PreferencesPage {
             title: _("Enable Debugging");
             subtitle: _("Whether to enable debugging logs");
         }
+
+        Adw.ActionRow {
+            title: _("Minimum Window Size Trigger");
+            subtitle: _("Minimum window size (NxN) triggering mouse-follows-focus events");
+
+            Gtk.Box {
+                orientation: horizontal;
+                Gtk.SpinButton {
+                    adjustment: Gtk.Adjustment minimumSizeTrigger {
+                        lower: 0;
+                        upper: 1000;
+                        step-increment: 1;
+                    };
+                }
+            }
+        }
+
+        Adw.ActionRow {
+            title: _("Motion Event Timeout Milliseconds");
+            subtitle: _("How long before resetting the mouse motion event detection timeout");
+
+            Gtk.Box {
+                orientation: horizontal;
+                Gtk.SpinButton {
+                    adjustment: Gtk.Adjustment motionEventTimeout {
+                        lower: 0;
+                        upper: 10000;
+                        step-increment: 1;
+                    };
+                }
+            }
+        }
     }
 }
