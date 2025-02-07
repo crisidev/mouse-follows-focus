@@ -48,6 +48,31 @@ and with a dynamic UI built in the extension. Settings changed with the UI will 
 * `minimum-size-trigger`: minimum window size (NxN) triggering mouse-follows-focus events
 * `motion-event-timeout`: How long before resetting the mouse motion event detection timeout
 
+## Dbus Integration
+
+The extensions exposes some Dbus methods I am using for my day to day productivity:
+
+### Focus a Workspace
+
+```bash
+gdbus call --session --dest org.gnome.Shell --object-path /org/gnome/Shell/Extensions/MouseFollowsFocus \
+    --method org.gnome.Shell.Extensions.MouseFollowsFocus.FocusWorkspace $WORSPACE_NUMBER # 1,2,3,etc..
+```
+
+### Hide the Overview
+
+```bash
+gdbus call --session --dest org.gnome.Shell --object-path /org/gnome/Shell/Extensions/MouseFollowsFocus \
+    --method org.gnome.Shell.Extensions.MouseFollowsFocus.HideOverview
+```
+
+### Clear all Notifications
+
+```bash
+gdbus call --session --dest org.gnome.Shell --object-path /org/gnome/Shell/Extensions/MouseFollowsFocus \
+    --method org.gnome.Shell.Extensions.MouseFollowsFocus.ClearNotifications
+```
+
 ## Contributing
 
 Contributions are welcome! Feel free to open issues or submit pull requests to improve the extension.

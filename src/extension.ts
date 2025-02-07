@@ -20,10 +20,11 @@
 // import GLib from "gi://GLib";
 // import Gio from "gi://Gio";
 import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
-import { overview } from "resource:///org/gnome/shell/ui/main.js";
+import { overview, panel } from "resource:///org/gnome/shell/ui/main.js";
 import Meta from "gi://Meta";
 import GLib from "gi://GLib";
 import Mtk from "gi://Mtk";
+import Gio from "gi://Gio";
 import Clutter from "gi://Clutter";
 
 export default class MouseFollowsFocus extends Extension {
@@ -33,9 +34,28 @@ export default class MouseFollowsFocus extends Extension {
   motionEventSignal: number | null = null;
   motionEventTimer: number | null = null;
   isMouseMoving = false;
+  dbus?: Gio.DBusExportedObject | null = null;
+  dbus_interface = `<node>
+   <interface name="org.gnome.Shell.Extensions.MouseFollowsFocus">
+      <method name="FocusWorkspace">
+         <arg type="u" direction="in" name="workspaceId" />
+      </method>
+      <method name="HideOverview">
+      </method>
+      <method name="ClearNotifications">
+      </method>
+   </interface>
+</node>`;
 
   override enable(): void {
     this.info_log("Enabling extension");
+
+    this.info_log("Registering dbus interface");
+    this.dbus = Gio.DBusExportedObject.wrapJSObject(this.dbus_interface, this);
+    this.dbus.export(
+      Gio.DBus.session,
+      "/org/gnome/Shell/Extensions/MouseFollowsFocus",
+    );
 
     this.info_log("Attatching to available windows");
     for (const actor of global.get_window_actors()) {
@@ -145,6 +165,13 @@ export default class MouseFollowsFocus extends Extension {
           this.connectedWindowsSignals.delete(win.get_id());
         }
       }
+    }
+
+    this.info_log("Deatching dbus interface");
+    if (this.dbus) {
+      this.dbus.flush();
+      this.dbus.unexport();
+      delete this.dbus;
     }
     this.info_log("Detatched to available windows");
     this.debug_log("Extension disabled");
@@ -270,5 +297,27 @@ export default class MouseFollowsFocus extends Extension {
     } else {
       this.warp_pointer(windowRectangle);
     }
+  }
+
+  FocusWorkspace(workspaceId: number): void {
+    const workspace = global.workspace_manager.get_workspace_by_index(workspaceId);
+    if (workspace) {
+      workspace.activate(global.get_current_time());
+    } else {
+      this.debug_log(`Unable to focus workspace ${workspaceId.toString()}`);
+    }
+  }
+
+  HideOverview(): void {
+    /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+    overview.hide();
+    /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+  }
+
+  ClearNotifications(): void {
+    /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
+    /* @ts-expect-error We access to private interfaces that are not available to typescript */
+    panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());
+    /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
   }
 }
