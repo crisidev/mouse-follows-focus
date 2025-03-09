@@ -12,10 +12,19 @@
       <description>Minimum window size (NxN) triggering mouse-follows-focus events.</description>
     </key>
     <key name="motion-event-timeout" type="i">
-      <default>100</default>
+      <default>150</default>
       <summary>Motion event timeout (ms)</summary>
       <description>How long before resetting the mouse motion event detection timeout.</description>
     </key>
-
+    <key name="top-bar-height" type="i">
+      <default>40</default>
+      <summary>Top bar heigh</summary>
+      <description>Do not track mouse on the first N pixels from the top (0 to disable).</description>
+    </key>
+    <key name="bottom-bar-height" type="i">
+      <default>80</default>
+      <summary>Bottom bar heigh</summary>
+      <description>Do not track mouse on the last N pixels from the bottom (0 to disable).</description>
+    </key>
   </schema>
 </schemalist>

@@ -42,5 +42,37 @@ template $TypescriptTemplateGeneralPage : Adw.PreferencesPage {
                 }
             }
         }
+
+        Adw.ActionRow {
+            title: _("Top bar height");
+            subtitle: _("Do not track mouse on the first N pixels from the top (0 to disable)");
+
+            Gtk.Box {
+                orientation: horizontal;
+                Gtk.SpinButton {
+                    adjustment: Gtk.Adjustment topBarHeight {
+                        lower: 0;
+                        upper: 10000;
+                        step-increment: 1;
+                    };
+                }
+            }
+        }
+
+        Adw.ActionRow {
+            title: _("Bottom bar height");
+            subtitle: _("Do not track mouse on the last N pixels from the top (0 to disable)");
+
+            Gtk.Box {
+                orientation: horizontal;
+                Gtk.SpinButton {
+                    adjustment: Gtk.Adjustment bottomBarHeight {
+                        lower: 0;
+                        upper: 10000;
+                        step-increment: 1;
+                    };
+                }
+            }
+        }
     }
 }

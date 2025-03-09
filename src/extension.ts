@@ -17,8 +17,6 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
-// import GLib from "gi://GLib";
-// import Gio from "gi://Gio";
 import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
 import { overview, panel } from "resource:///org/gnome/shell/ui/main.js";
 import Meta from "gi://Meta";
@@ -27,15 +25,22 @@ import Mtk from "gi://Mtk";
 import Gio from "gi://Gio";
 import Clutter from "gi://Clutter";
 
+interface Child {
+  clear(): null;
+}
+
 export default class MouseFollowsFocus extends Extension {
-  connectedWindowsSignals = new Map<number, number>();
-  windowCreatedSignal: number | null = null;
-  windowHiddenSignal: number | null = null;
-  motionEventSignal: number | null = null;
-  motionEventTimer: number | null = null;
-  isMouseMoving = false;
-  dbus?: Gio.DBusExportedObject | null = null;
-  dbus_interface = `<node>
+  private connectedWindowsSignals = new Map<number, number>();
+  private windowCreatedSignal: number | null = null;
+  private windowHiddenSignal: number | null = null;
+  private motionEventSignal: number | null = null;
+  private motionEventTimer: number | null = null;
+  private topBarHeight = 0;
+  private bottomBarHeight = 0;
+  private minimumSizeTrigger = 0;
+  private isMouseMoving = false;
+  private dbus?: Gio.DBusExportedObject | null = null;
+  private dbus_interface = `<node>
    <interface name="org.gnome.Shell.Extensions.MouseFollowsFocus">
       <method name="FocusWorkspace">
          <arg type="u" direction="in" name="workspaceId" />
@@ -94,33 +99,38 @@ export default class MouseFollowsFocus extends Extension {
     this.info_log("Signal window-hidden started");
 
     this.motionEventSignal = global.stage.connect("motion-event", () => {
-      this.debug_log("Setting mouse movement guard to true");
-      this.isMouseMoving = true;
+      if (!this.isMouseMoving) {
+        this.debug_log("Setting mouse movement guard to true");
+        this.isMouseMoving = true;
 
-      if (this.motionEventTimer) {
-        this.debug_log("Removing mouse movement reset timer");
-        GLib.Source.remove(this.motionEventTimer);
+        if (this.motionEventTimer) {
+          this.debug_log("Removing mouse movement reset timer");
+          GLib.Source.remove(this.motionEventTimer);
+        }
+
+        this.motionEventTimer = GLib.timeout_add(
+          GLib.PRIORITY_DEFAULT,
+          this.getSettings().get_int("motion-event-timeout"),
+          (): boolean => {
+            this.debug_log(
+              `Setting mouse movement guard to false after timeout`,
+            );
+            this.isMouseMoving = false;
+            return false;
+          },
+        );
+      } else {
+        this.debug_log("Mouse movement guard already set");
       }
-
-      const motionEventTimeout = this.getSettings().get_int(
-        "motion-event-timeout",
-      );
-
-      this.motionEventTimer = GLib.timeout_add(
-        GLib.PRIORITY_DEFAULT,
-        motionEventTimeout,
-        (): boolean => {
-          this.debug_log(
-            `Setting mouse movement guard to false after timeout of ${motionEventTimeout.toString()}`,
-          );
-          this.isMouseMoving = false;
-          return false;
-        },
-      );
     });
     this.info_log(
       `Signal motion-event started with id ${this.motionEventSignal.toString()}`,
     );
+    this.minimumSizeTrigger = this.getSettings().get_int(
+      "minimum-size-trigger",
+    );
+    this.topBarHeight = this.getSettings().get_int("top-bar-height");
+    this.bottomBarHeight = this.getSettings().get_int("bottom-bar-height");
     this.debug_log("Extension enabled");
   }
 
@@ -177,17 +187,17 @@ export default class MouseFollowsFocus extends Extension {
     this.debug_log("Extension disabled");
   }
 
-  debug_log(message: string): void {
+  private debug_log(message: string): void {
     if (this.getSettings().get_boolean("enable-debugging")) {
       console.log(`[${this.metadata.name}] DEBUG ${message}`);
     }
   }
 
-  info_log(message: string): void {
+  private info_log(message: string): void {
     console.log(`[${this.metadata.name}] INFO  ${message}`);
   }
 
-  connect_to_window(win: Meta.Window): void {
+  private connect_to_window(win: Meta.Window): void {
     const windowType = win.get_window_type();
     if (windowType !== Meta.WindowType.NORMAL) {
       this.debug_log(
@@ -204,7 +214,7 @@ export default class MouseFollowsFocus extends Extension {
     );
   }
 
-  get_window_actor(win: Meta.Window): Meta.WindowActor | undefined {
+  private get_window_actor(win: Meta.Window): Meta.WindowActor | undefined {
     return global
       .get_window_actors()
       .find(
@@ -212,7 +222,7 @@ export default class MouseFollowsFocus extends Extension {
       );
   }
 
-  cursor_within_window(
+  private cursor_within_window(
     mouseX: number,
     mouseY: number,
     windowRectangle: Mtk.Rectangle,
@@ -225,7 +235,9 @@ export default class MouseFollowsFocus extends Extension {
     );
   }
 
-  warp_pointer(windowRectangle: Mtk.Rectangle): void {
+  private warp_pointer(win: Meta.Window): void {
+    this.debug_log(`Warping to window ${win.wm_class} center`);
+    const windowRectangle = win.get_buffer_rect();
     Clutter.get_default_backend()
       .get_default_seat()
       .warp_pointer(
@@ -234,7 +246,7 @@ export default class MouseFollowsFocus extends Extension {
       );
   }
 
-  focus_changed(win: Meta.Window | null): void {
+  private focus_changed(win: Meta.Window | null): void {
     if (!win) {
       this.debug_log("Focus change skipped due to empty window object");
       return;
@@ -276,31 +288,34 @@ export default class MouseFollowsFocus extends Extension {
 
     if (sourceMonitorIndex !== destinationMonitorIndex) {
       this.debug_log("Focus switched to a different monitor");
-      this.warp_pointer(windowRectangle);
+      this.warp_pointer(win);
       return;
     }
 
-    const minimumSizeTrigger = this.getSettings().get_int(
-      "minimum-size-trigger",
-    );
-    if (this.cursor_within_window(mouseX, mouseY, windowRectangle)) {
+    const monitorHeight = global.display.get_size()[1];
+    if (mouseY < this.topBarHeight) {
+      this.debug_log("Over the top bar, ignoring event.");
+    } else if (mouseY > monitorHeight - this.bottomBarHeight) {
+      this.debug_log("Over the bottom bar, ignoring event.");
+    } else if (this.cursor_within_window(mouseX, mouseY, windowRectangle)) {
       this.debug_log("Pointer within window, ignoring event.");
       /* eslint-disable @typescript-eslint/no-unsafe-member-access */
     } else if (overview.visible) {
       /* eslint-enable @typescript-eslint/no-unsafe-member-access */
       this.debug_log("Overview visible, ignoring event.");
     } else if (
-      windowRectangle.width < minimumSizeTrigger &&
-      windowRectangle.height < minimumSizeTrigger
+      windowRectangle.width < this.minimumSizeTrigger &&
+      windowRectangle.height < this.minimumSizeTrigger
     ) {
       this.debug_log("Window too small, ignoring event.");
     } else {
-      this.warp_pointer(windowRectangle);
+      this.warp_pointer(win);
     }
   }
 
   FocusWorkspace(workspaceId: number): void {
-    const workspace = global.workspace_manager.get_workspace_by_index(workspaceId);
+    const workspace =
+      global.workspace_manager.get_workspace_by_index(workspaceId);
     if (workspace) {
       workspace.activate(global.get_current_time());
     } else {
@@ -315,9 +330,11 @@ export default class MouseFollowsFocus extends Extension {
   }
 
   ClearNotifications(): void {
-    /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
+    /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
     /* @ts-expect-error We access to private interfaces that are not available to typescript */
-    panel.statusArea.dateMenu._messageList._sectionList.get_children().forEach(s => s.clear());
-    /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
+    panel.statusArea.dateMenu._messageList._sectionList
+      .get_children()
+      .forEach((s: Child) => s.clear());
+    /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
   }
 }

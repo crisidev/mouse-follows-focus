@@ -29,6 +29,8 @@ interface TypescriptTemplateGeneralPage {
   _enableDebugging: Adw.SwitchRow;
   _minimumSizeTrigger: Gtk.SpinButton;
   _motionEventTimeout: Gtk.SpinButton;
+  _topBarHeight: Gtk.SpinButton;
+  _bottomBarHeight: Gtk.SpinButton;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
@@ -56,6 +58,20 @@ class TypescriptTemplateGeneralPage extends Adw.PreferencesPage {
       "value",
       Gio.SettingsBindFlags.DEFAULT,
     );
+
+    settings.bind(
+      "top-bar-height",
+      this._topBarHeight,
+      "value",
+      Gio.SettingsBindFlags.DEFAULT,
+    );
+
+    settings.bind(
+      "bottom-bar-height",
+      this._bottomBarHeight,
+      "value",
+      Gio.SettingsBindFlags.DEFAULT,
+    );
   }
 }
 
@@ -67,6 +83,8 @@ export default GObject.registerClass(
       "enableDebugging",
       "minimumSizeTrigger",
       "motionEventTimeout",
+      "topBarHeight",
+      "bottomBarHeight",
     ],
   },
   TypescriptTemplateGeneralPage,

@@ -1,48 +1,61 @@
 {
-  "license": "GPL-2.0-or-later OR MPL-2.0",
-  "type": "module",
-  "private": true,
-  "scripts": {
-    "blueprint": "glob -c 'blueprint-compiler batch-compile ui ui' 'ui/*.blp'",
-    "postblueprint": "git add ui",
-    "compile": "tsc --build tsconfig.json",
-    "postcompile": "eslint --no-config-lookup --config eslint.config.dist.js --quiet --fix .",
-    "prepack": "npm run compile",
-    "pack": "gsebuild pack",
-    "check:types": "tsc --build tsconfig.types.json --force",
-    "xgettext": "gsebuild xgettext",
-    "lint": "eslint .",
-    "format": "prettier .",
-    "clean": "rimraf --no-interactive dist build"
-  },
-  "engines": {
-    "node": ">=22"
-  },
-  "devDependencies": {
-    "@girs/gnome-shell": "^47.0.1",
-    "@swsnr/gsebuild": "^0.1.2",
-    "eslint": "^9.19.0",
-    "eslint-config-prettier": "^10.0.1",
-    "prettier": "^3.4.2",
-    "rimraf": "^6.0.1",
-    "typescript": "^5.7.3"
-  },
-  "gsebuild": {
-    "gettext": {
-      "sources": ["ui/*.blp"],
-      "copyright-holder": "Matteo Bigoi <bigo@crisidev.org>"
+    "license": "GPL-2.0-or-later OR MPL-2.0",
+    "type": "module",
+    "private": true,
+    "scripts": {
+        "blueprint": "glob -c 'blueprint-compiler batch-compile ui ui' 'ui/*.blp'",
+        "postblueprint": "git add ui",
+        "compile": "tsc --build tsconfig.json",
+        "postcompile": "eslint --no-config-lookup --config eslint.config.dist.js --quiet --fix .",
+        "prepack": "npm run compile",
+        "pack": "gsebuild pack",
+        "check:types": "tsc --build tsconfig.types.json --force",
+        "xgettext": "gsebuild xgettext",
+        "lint": "eslint .",
+        "format": "prettier .",
+        "clean": "rimraf --no-interactive dist build"
     },
-    "pack": {
-      "copy-to-source": ["ui/*.ui"],
-      "source-directory": "build",
-      "extra-sources": [
-        "lib",
-        "ui",
-        "../LICENSE*",
-        "../README.md",
-        "../icons/"
-      ],
-      "schemas": ["../schemas/*.gschema.xml"]
+    "engines": {
+        "node": ">=22"
+    },
+    "devDependencies": {
+        "@girs/gnome-shell": "^47.0.1",
+        "@swsnr/gsebuild": "^0.1.2",
+        "eslint": "^9.21.0",
+        "eslint-config-prettier": "^10.0.2",
+        "prettier": "^3.5.2",
+        "rimraf": "^6.0.1",
+        "typescript": "^5.8.2"
+    },
+    "overrides": {
+        "@girs/gobject-2.0": "2.83.3-4.0.0-beta.21",
+        "@girs/glib-2.0": "2.83.3-4.0.0-beta.21",
+        "@girs/gio-2.0": "2.83.3-4.0.0-beta.21",
+        "@girs/gcr-4": "4.3.91-4.0.0-beta.21",
+        "@girs/gtk-4.0": "4.17.5-4.0.0-beta.21"
+    },
+    "gsebuild": {
+        "gettext": {
+            "sources": [
+                "ui/*.blp"
+            ],
+            "copyright-holder": "Matteo Bigoi <bigo@crisidev.org>"
+        },
+        "pack": {
+            "copy-to-source": [
+                "ui/*.ui"
+            ],
+            "source-directory": "build",
+            "extra-sources": [
+                "lib",
+                "ui",
+                "../LICENSE*",
+                "../README.md",
+                "../icons/"
+            ],
+            "schemas": [
+                "../schemas/*.gschema.xml"
+            ]
+        }
     }
-  }
 }

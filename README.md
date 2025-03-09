@@ -16,6 +16,7 @@ The user experience is meant to be as similar as possible to i3/sway.
 - **Automatic Mouse Positioning**: Automatically repositions the mouse pointer to the center of the window that gains focus.
 - **Multi-Monitor Support**: Seamlessly operates across multiple monitors, ensuring consistent behavior in multi-display setups.
 - **Compatibility**: Designed for GNOME Shell version 45 and above.
+- **Smooth**: Certain XWayland windows do not obey to normal focus rules and the pointer warps in the middle of the window. To handle this, the top and bottom bars area can be excluded from focus handling (see top/bottom bar height config option).
 
 ## Installation
 
@@ -45,8 +46,10 @@ The extension can be configured with `dconf` / `gsettings` under the namespace `
 and with a dynamic UI built in the extension. Settings changed with the UI will be synced with `gsettings` and vice versa.
 
 * `enable-debugging`: Set to `true` to enable debugging. It's very verbose :D
-* `minimum-size-trigger`: minimum window size (NxN) triggering mouse-follows-focus events
+* `minimum-size-trigger`: Minimum window size (NxN) triggering mouse-follows-focus events
 * `motion-event-timeout`: How long before resetting the mouse motion event detection timeout
+* `top-bar-height`: Do not handle focus over the first N pixels from the top (0 to disable).
+* `bottom-bar-height`: Do not handle focus over the last N pixels at the bottom (0 to disable).
 
 ## Dbus Integration
 

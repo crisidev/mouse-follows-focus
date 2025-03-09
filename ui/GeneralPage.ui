@@ -7,20 +7,20 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
 <interface>
   <requires lib="gtk" version="4.0"/>
   <template class="TypescriptTemplateGeneralPage" parent="AdwPreferencesPage">
-    <property name="title" translatable="true">General</property>
+    <property name="title" translatable="yes">General</property>
     <property name="icon_name">dialog-information-symbolic</property>
     <child>
       <object class="AdwPreferencesGroup">
         <child>
           <object class="AdwSwitchRow" id="enableDebugging">
-            <property name="title" translatable="true">Enable Debugging</property>
-            <property name="subtitle" translatable="true">Whether to enable debugging logs</property>
+            <property name="title" translatable="yes">Enable Debugging</property>
+            <property name="subtitle" translatable="yes">Whether to enable debugging logs</property>
           </object>
         </child>
         <child>
           <object class="AdwActionRow">
-            <property name="title" translatable="true">Minimum Window Size Trigger</property>
-            <property name="subtitle" translatable="true">Minimum window size (NxN) triggering mouse-follows-focus events</property>
+            <property name="title" translatable="yes">Minimum Window Size Trigger</property>
+            <property name="subtitle" translatable="yes">Minimum window size (NxN) triggering mouse-follows-focus events</property>
             <child>
               <object class="GtkBox">
                 <property name="orientation">0</property>
@@ -41,8 +41,8 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
         </child>
         <child>
           <object class="AdwActionRow">
-            <property name="title" translatable="true">Motion Event Timeout Milliseconds</property>
-            <property name="subtitle" translatable="true">How long before resetting the mouse motion event detection timeout</property>
+            <property name="title" translatable="yes">Motion Event Timeout Milliseconds</property>
+            <property name="subtitle" translatable="yes">How long before resetting the mouse motion event detection timeout</property>
             <child>
               <object class="GtkBox">
                 <property name="orientation">0</property>
@@ -50,6 +50,50 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
                   <object class="GtkSpinButton">
                     <property name="adjustment">
                       <object class="GtkAdjustment" id="motionEventTimeout">
+                        <property name="lower">0</property>
+                        <property name="upper">10000</property>
+                        <property name="step-increment">1</property>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="AdwActionRow">
+            <property name="title" translatable="yes">Top bar height</property>
+            <property name="subtitle" translatable="yes">Do not track mouse on the first N pixels from the top (0 to disable)</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">0</property>
+                <child>
+                  <object class="GtkSpinButton">
+                    <property name="adjustment">
+                      <object class="GtkAdjustment" id="topBarHeight">
+                        <property name="lower">0</property>
+                        <property name="upper">10000</property>
+                        <property name="step-increment">1</property>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="AdwActionRow">
+            <property name="title" translatable="yes">Bottom bar height</property>
+            <property name="subtitle" translatable="yes">Do not track mouse on the last N pixels from the top (0 to disable)</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">0</property>
+                <child>
+                  <object class="GtkSpinButton">
+                    <property name="adjustment">
+                      <object class="GtkAdjustment" id="bottomBarHeight">
                         <property name="lower">0</property>
                         <property name="upper">10000</property>
                         <property name="step-increment">1</property>
