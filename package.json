@@ -16,7 +16,7 @@
         "clean": "rimraf --no-interactive dist build"
     },
     "engines": {
-        "node": ">=22"
+        "node": ">=23"
     },
     "devDependencies": {
         "@girs/gnome-shell": "^47.0.1",
