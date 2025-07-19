@@ -2,8 +2,8 @@
   "name": "Mouse Follows Focus",
   "uuid": "mouse-follows-focus@crisidev.org",
   "description": "Enable mouse follows focus on Gnome Shell 45+ with multi monitors support",
-  "version-name": "0.0.4",
+  "version-name": "0.0.5",
   "url": "https://github.com/crisidev/mouse-follows-focus",
-  "shell-version": ["45", "46", "47"],
+  "shell-version": ["45", "46", "47", "48"],
   "settings-schema": "org.gnome.shell.extensions.mouse-follows-focus"
 }
