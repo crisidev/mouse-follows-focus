@@ -26,5 +26,13 @@
       <summary>Bottom bar heigh</summary>
       <description>Do not track mouse on the last N pixels from the bottom (0 to disable).</description>
     </key>
+    <key name="pointer-warp-position" type="s">
+      <default>'center'</default>
+      <summary>Pointer warp position</summary>
+      <description>
+        Defines where the pointer should warp when switching windows.
+        Available values: 'top-left', 'bottom-left', 'top-right', 'bottom-right', 'center'.
+      </description>
+    </key>
   </schema>
 </schemalist>

@@ -105,6 +105,23 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
             </child>
           </object>
         </child>
+        <child>
+          <object class="AdwComboRow" id="pointerWarpPosition">
+            <property name="title" translatable="yes">Pointer warp position</property>
+            <property name="subtitle" translatable="yes">Defines where the pointer should warp when switching windows</property>
+            <property name="model">
+              <object class="GtkStringList">
+                <items>
+                  <item translatable="yes">center</item>
+                  <item translatable="yes">top-left</item>
+                  <item translatable="yes">top-right</item>
+                  <item translatable="yes">bottom-left</item>
+                  <item translatable="yes">bottom-right</item>
+                </items>
+              </object>
+            </property>
+          </object>
+        </child>
       </object>
     </child>
   </template>

@@ -35,9 +35,6 @@ export default class MouseFollowsFocus extends Extension {
   private windowHiddenSignal: number | null = null;
   private motionEventSignal: number | null = null;
   private motionEventTimer: number | null = null;
-  private topBarHeight = 0;
-  private bottomBarHeight = 0;
-  private minimumSizeTrigger = 0;
   private isMouseMoving = false;
   private dbus?: Gio.DBusExportedObject | null = null;
   private dbus_interface = `<node>
@@ -126,11 +123,6 @@ export default class MouseFollowsFocus extends Extension {
     this.info_log(
       `Signal motion-event started with id ${this.motionEventSignal.toString()}`,
     );
-    this.minimumSizeTrigger = this.getSettings().get_int(
-      "minimum-size-trigger",
-    );
-    this.topBarHeight = this.getSettings().get_int("top-bar-height");
-    this.bottomBarHeight = this.getSettings().get_int("bottom-bar-height");
     this.debug_log("Extension enabled");
   }
 
@@ -236,14 +228,37 @@ export default class MouseFollowsFocus extends Extension {
   }
 
   private warp_pointer(win: Meta.Window): void {
-    this.debug_log(`Warping to window ${win.wm_class} center`);
+    const position = this.getSettings().get_string("pointer-warp-position");
     const windowRectangle = win.get_buffer_rect();
-    Clutter.get_default_backend()
-      .get_default_seat()
-      .warp_pointer(
-        windowRectangle.x + windowRectangle.width / 2,
-        windowRectangle.y + windowRectangle.height / 2,
-      );
+    let x: number;
+    let y: number;
+
+    switch (position) {
+      case "top-left":
+        x = windowRectangle.x;
+        y = windowRectangle.y;
+        break;
+      case "top-right":
+        x = windowRectangle.x + windowRectangle.width;
+        y = windowRectangle.y;
+        break;
+      case "bottom-left":
+        x = windowRectangle.x;
+        y = windowRectangle.y + windowRectangle.height;
+        break;
+      case "bottom-right":
+        x = windowRectangle.x + windowRectangle.width;
+        y = windowRectangle.y + windowRectangle.height;
+        break;
+      case "center":
+      default:
+        x = windowRectangle.x + windowRectangle.width / 2;
+        y = windowRectangle.y + windowRectangle.height / 2;
+        break;
+    }
+
+    this.debug_log(`Warping to window ${win.wm_class} at position ${position}`);
+    Clutter.get_default_backend().get_default_seat().warp_pointer(x, y);
   }
 
   private focus_changed(win: Meta.Window | null): void {
@@ -293,9 +308,15 @@ export default class MouseFollowsFocus extends Extension {
     }
 
     const monitorHeight = global.display.get_size()[1];
-    if (mouseY < this.topBarHeight) {
+    const minimumSizeTrigger = this.getSettings().get_int(
+      "minimum-size-trigger",
+    );
+    if (mouseY < this.getSettings().get_int("top-bar-height")) {
       this.debug_log("Over the top bar, ignoring event.");
-    } else if (mouseY > monitorHeight - this.bottomBarHeight) {
+    } else if (
+      mouseY >
+      monitorHeight - this.getSettings().get_int("bottom-bar-height")
+    ) {
       this.debug_log("Over the bottom bar, ignoring event.");
     } else if (this.cursor_within_window(mouseX, mouseY, windowRectangle)) {
       this.debug_log("Pointer within window, ignoring event.");
@@ -304,8 +325,8 @@ export default class MouseFollowsFocus extends Extension {
       /* eslint-enable @typescript-eslint/no-unsafe-member-access */
       this.debug_log("Overview visible, ignoring event.");
     } else if (
-      windowRectangle.width < this.minimumSizeTrigger &&
-      windowRectangle.height < this.minimumSizeTrigger
+      windowRectangle.width < minimumSizeTrigger &&
+      windowRectangle.height < minimumSizeTrigger
     ) {
       this.debug_log("Window too small, ignoring event.");
     } else {

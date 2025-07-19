@@ -31,6 +31,7 @@ interface TypescriptTemplateGeneralPage {
   _motionEventTimeout: Gtk.SpinButton;
   _topBarHeight: Gtk.SpinButton;
   _bottomBarHeight: Gtk.SpinButton;
+  _pointerWarpPosition: Adw.ComboRow;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
@@ -72,6 +73,14 @@ class TypescriptTemplateGeneralPage extends Adw.PreferencesPage {
       "value",
       Gio.SettingsBindFlags.DEFAULT,
     );
+
+    settings.bind(
+      "pointer-warp-position",
+      this._pointerWarpPosition,
+      "selected",
+      Gio.SettingsBindFlags.DEFAULT,
+    );
+
   }
 }
 
@@ -85,6 +94,7 @@ export default GObject.registerClass(
       "motionEventTimeout",
       "topBarHeight",
       "bottomBarHeight",
+      "pointerWarpPosition"
     ],
   },
   TypescriptTemplateGeneralPage,

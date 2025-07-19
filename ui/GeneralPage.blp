@@ -1,7 +1,7 @@
 using Gtk 4.0;
 using Adw 1;
 
-template $TypescriptTemplateGeneralPage : Adw.PreferencesPage {
+template $TypescriptTemplateGeneralPage: Adw.PreferencesPage {
     title: _("General");
     icon_name: "dialog-information-symbolic";
 
@@ -17,6 +17,7 @@ template $TypescriptTemplateGeneralPage : Adw.PreferencesPage {
 
             Gtk.Box {
                 orientation: horizontal;
+
                 Gtk.SpinButton {
                     adjustment: Gtk.Adjustment minimumSizeTrigger {
                         lower: 0;
@@ -33,6 +34,7 @@ template $TypescriptTemplateGeneralPage : Adw.PreferencesPage {
 
             Gtk.Box {
                 orientation: horizontal;
+
                 Gtk.SpinButton {
                     adjustment: Gtk.Adjustment motionEventTimeout {
                         lower: 0;
@@ -49,6 +51,7 @@ template $TypescriptTemplateGeneralPage : Adw.PreferencesPage {
 
             Gtk.Box {
                 orientation: horizontal;
+
                 Gtk.SpinButton {
                     adjustment: Gtk.Adjustment topBarHeight {
                         lower: 0;
@@ -65,6 +68,7 @@ template $TypescriptTemplateGeneralPage : Adw.PreferencesPage {
 
             Gtk.Box {
                 orientation: horizontal;
+
                 Gtk.SpinButton {
                     adjustment: Gtk.Adjustment bottomBarHeight {
                         lower: 0;
@@ -73,6 +77,21 @@ template $TypescriptTemplateGeneralPage : Adw.PreferencesPage {
                     };
                 }
             }
+        }
+
+        Adw.ComboRow pointerWarpPosition {
+            title: _("Pointer warp position");
+            subtitle: _("Defines where the pointer should warp when switching windows");
+
+            model: StringList {
+                strings [
+                    _("center"),
+                    _("top-left"),
+                    _("top-right"),
+                    _("bottom-left"),
+                    _("bottom-right"),
+                ]
+            };
         }
     }
 }
