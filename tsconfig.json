@@ -1,5 +1,5 @@
 {
-  "extends": "@swsnr/gsebuild/tsconfig.json",
+  "extends": "./node_modules/gsebuild/tsconfig/tsconfig.json",
   "compilerOptions": {
     "outDir": "build"
   },

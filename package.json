@@ -20,7 +20,6 @@
     },
     "devDependencies": {
         "@girs/gnome-shell": "^47.0.1",
-        "@swsnr/gsebuild": "^0.1.2",
         "gsebuild": "github:jon4hz/gsebuild#a7d8c3fb12d9dd9165b62aca88a32a57fc39d0d0",
         "eslint": "^9.21.0",
         "eslint-config-prettier": "^10.0.2",

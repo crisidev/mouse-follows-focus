@@ -6,7 +6,7 @@
 
 // @ts-check
 
-import gsebuild from "@swsnr/gsebuild/eslint";
+import gsebuild from "gsebuild/eslint";
 import eslintConfigPrettier from "eslint-config-prettier";
 
 // Consider eslint-plugin-promise again once it supports flat config,
