@@ -18,12 +18,17 @@
 // GNU General Public License for more details.
 
 import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
-import { overview, panel } from "resource:///org/gnome/shell/ui/main.js";
+import {
+  overview,
+  panel,
+  messageTray,
+} from "resource:///org/gnome/shell/ui/main.js";
 import Meta from "gi://Meta";
 import GLib from "gi://GLib";
 import Mtk from "gi://Mtk";
 import Gio from "gi://Gio";
 import Clutter from "gi://Clutter";
+import { NotificationDestroyedReason, Source } from "resource:///org/gnome/shell/ui/messageTray.js";
 
 interface Child {
   clear(): null;
@@ -330,11 +335,19 @@ export default class MouseFollowsFocus extends Extension {
   }
 
   ClearNotifications(): void {
-    /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+    /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
     /* @ts-expect-error We access to private interfaces that are not available to typescript */
-    panel.statusArea.dateMenu._messageList._sectionList
-      .get_children()
-      .forEach((s: Child) => s.clear());
-    /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+    const sectionList = panel.statusArea.dateMenu._messageList?._sectionList;
+
+    if (sectionList) {
+      // GNOME 46 and earlier
+      sectionList.get_children().forEach((s: Child) => s.clear());
+    } else {
+      // GNOME 47+
+      messageTray.getSources().forEach((source: Source) => {
+        source.destroy(NotificationDestroyedReason.DISMISSED);
+      });
+    }
+    /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
   }
 }
