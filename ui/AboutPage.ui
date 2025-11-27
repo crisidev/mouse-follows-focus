@@ -7,7 +7,7 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
 <interface>
   <requires lib="gtk" version="4.0"/>
   <template class="TypescriptTemplateAboutPage" parent="AdwPreferencesPage">
-    <property name="title" translatable="yes">About</property>
+    <property name="title" translatable="true">About</property>
     <property name="icon-name">dialog-information-symbolic</property>
     <child>
       <object class="AdwPreferencesGroup">
@@ -29,7 +29,7 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
             </child>
             <child>
               <object class="GtkLabel" id="extensionVersion">
-                <property name="label">0.0.5</property>
+                <property name="label">0.0.8</property>
                 <style>
                   <class name="caption"/>
                 </style>
@@ -55,12 +55,12 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
             <property name="halign">3</property>
             <child>
               <object class="GtkLinkButton" id="linkGithub">
-                <property name="label" translatable="yes" context="about link">Github</property>
+                <property name="label" translatable="true" context="about link">Github</property>
               </object>
             </child>
             <child>
               <object class="GtkLinkButton" id="linkIssues">
-                <property name="label" translatable="yes" context="about link">Issue tracker</property>
+                <property name="label" translatable="true" context="about link">Issue tracker</property>
               </object>
             </child>
           </object>

@@ -231,12 +231,13 @@ export default class MouseFollowsFocus extends Extension {
     mouseX: number,
     mouseY: number,
     windowRectangle: Mtk.Rectangle,
+    tolerance: number = 5,
   ): boolean {
     return (
-      mouseX >= windowRectangle.x &&
-      mouseX <= windowRectangle.x + windowRectangle.width &&
-      mouseY >= windowRectangle.y &&
-      mouseY <= windowRectangle.y + windowRectangle.height
+      mouseX >= windowRectangle.x - tolerance &&
+      mouseX <= windowRectangle.x + windowRectangle.width + tolerance &&
+      mouseY >= windowRectangle.y - tolerance &&
+      mouseY <= windowRectangle.y + windowRectangle.height + tolerance
     );
   }
 
@@ -297,11 +298,14 @@ export default class MouseFollowsFocus extends Extension {
       return;
     }
 
-    const monitorHeight = global.display.get_size()[1];
+    const monitor = global.display.get_monitor_geometry(destinationMonitorIndex);
+    const monitorHeight = monitor.y + monitor.height;
     if (mouseY < this.topBarHeight) {
       this.debug_log("Over the top bar, ignoring event.");
+      return;
     } else if (mouseY > monitorHeight - this.bottomBarHeight) {
       this.debug_log("Over the bottom bar, ignoring event.");
+      return;
     } else if (this.cursor_within_window(mouseX, mouseY, windowRectangle)) {
       this.debug_log("Pointer within window, ignoring event.");
       /* eslint-disable @typescript-eslint/no-unsafe-member-access */
