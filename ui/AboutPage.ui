@@ -29,7 +29,7 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
             </child>
             <child>
               <object class="GtkLabel" id="extensionVersion">
-                <property name="label">0.0.8</property>
+                <property name="label">0.0.9</property>
                 <style>
                   <class name="caption"/>
                 </style>

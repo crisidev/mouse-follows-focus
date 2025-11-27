@@ -44,6 +44,10 @@ export default class MouseFollowsFocus extends Extension {
   private bottomBarHeight = 0;
   private minimumSizeTrigger = 0;
   private isMouseMoving = false;
+  private lastMouseX = 0;
+  private lastMouseY = 0;
+  private lastMouseTime = 0;
+  private currentFocusedWindow: Meta.Window | null = null;
   private dbus?: Gio.DBusExportedObject | null = null;
   private dbus_interface = `<node>
    <interface name="org.gnome.Shell.Extensions.MouseFollowsFocus">
@@ -104,6 +108,11 @@ export default class MouseFollowsFocus extends Extension {
     this.info_log("Signal window-hidden started");
 
     this.motionEventSignal = global.stage.connect("motion-event", () => {
+      const [mouseX, mouseY] = global.get_pointer();
+      this.lastMouseX = mouseX;
+      this.lastMouseY = mouseY;
+      this.lastMouseTime = GLib.get_monotonic_time();
+
       if (!this.isMouseMoving) {
         this.debug_log("Setting mouse movement guard to true");
         this.isMouseMoving = true;
@@ -241,6 +250,36 @@ export default class MouseFollowsFocus extends Extension {
     );
   }
 
+  private has_mouse_moved_recently(
+    currentX: number,
+    currentY: number,
+    thresholdMs: number = 150,
+    minDistance: number = 3,
+  ): boolean {
+    const currentTime = GLib.get_monotonic_time();
+    const timeDiffMs = (currentTime - this.lastMouseTime) / 1000;
+    const distance = Math.sqrt(
+      Math.pow(currentX - this.lastMouseX, 2) +
+      Math.pow(currentY - this.lastMouseY, 2),
+    );
+
+    const hasMoved = timeDiffMs < thresholdMs && distance > minDistance;
+    if (hasMoved) {
+      this.debug_log(`Recent movement detected: ${distance.toFixed(1)}px in ${timeDiffMs.toFixed(0)}ms`);
+    }
+    return hasMoved;
+  }
+
+  private window_has_decorations(win: Meta.Window): boolean {
+    const frameRect = win.get_frame_rect();
+    const bufferRect = win.get_buffer_rect();
+
+    return frameRect.x !== bufferRect.x ||
+           frameRect.y !== bufferRect.y ||
+           frameRect.width !== bufferRect.width ||
+           frameRect.height !== bufferRect.height;
+  }
+
   private warp_pointer(win: Meta.Window): void {
     this.debug_log(`Warping to window ${win.wm_class} center`);
     const windowRectangle = win.get_buffer_rect();
@@ -260,10 +299,23 @@ export default class MouseFollowsFocus extends Extension {
 
     this.debug_log(`Focus changed to "${win.get_title()}"`);
 
-    if (this.isMouseMoving) {
-      this.debug_log("Focus change skipped due to mouse movement");
+    // Check if this window is actually gaining focus or just being notified
+    if (this.currentFocusedWindow === win) {
+      this.debug_log("Window already focused, ignoring redundant focus event");
       return;
     }
+
+    // Check if the globally focused window is this window
+    const actualFocusedWindow = global.display.focus_window;
+    if (actualFocusedWindow !== win) {
+      this.debug_log("Window is not actually focused (losing focus event), ignoring");
+      return;
+    }
+
+    // Update current focused window
+    this.currentFocusedWindow = win;
+
+    const [mouseX, mouseY] = global.get_pointer();
 
     const actor = this.get_window_actor(win);
     if (!actor) {
@@ -279,7 +331,6 @@ export default class MouseFollowsFocus extends Extension {
     }
 
     const windowRectangle = win.get_buffer_rect();
-    const [mouseX, mouseY] = global.get_pointer();
     const sourceMonitorIndex = global.display.get_monitor_index_for_rect(
       new Mtk.Rectangle({ x: mouseX, y: mouseY, width: 1, height: 1 }),
     );
@@ -306,20 +357,47 @@ export default class MouseFollowsFocus extends Extension {
     } else if (mouseY > monitorHeight - this.bottomBarHeight) {
       this.debug_log("Over the bottom bar, ignoring event.");
       return;
-    } else if (this.cursor_within_window(mouseX, mouseY, windowRectangle)) {
-      this.debug_log("Pointer within window, ignoring event.");
+    }
+
+    // Use larger tolerance for borderless windows
+    const hasDecorations = this.window_has_decorations(win);
+    const tolerance = hasDecorations ? 5 : 20;
+    this.debug_log(`Window ${hasDecorations ? "has" : "has no"} decorations, using tolerance: ${tolerance}px`);
+
+    const isWithinWindow = this.cursor_within_window(mouseX, mouseY, windowRectangle, tolerance);
+
+    if (isWithinWindow) {
+      this.debug_log("Pointer within window (with tolerance), ignoring event.");
+      return;
       /* eslint-disable @typescript-eslint/no-unsafe-member-access */
     } else if (overview.visible) {
       /* eslint-enable @typescript-eslint/no-unsafe-member-access */
       this.debug_log("Overview visible, ignoring event.");
+      return;
     } else if (
       windowRectangle.width < this.minimumSizeTrigger &&
       windowRectangle.height < this.minimumSizeTrigger
     ) {
       this.debug_log("Window too small, ignoring event.");
-    } else {
-      this.warp_pointer(win);
+      return;
     }
+
+    // Now check if user is actively moving the mouse
+    // Only skip warp if mouse is moving AND close to the window (within extended tolerance)
+    const isMoving = this.isMouseMoving || this.has_mouse_moved_recently(mouseX, mouseY);
+    if (isMoving) {
+      const extendedTolerance = hasDecorations ? 10 : 40;
+      const isCloseToWindow = this.cursor_within_window(mouseX, mouseY, windowRectangle, extendedTolerance);
+
+      if (isCloseToWindow) {
+        this.debug_log("Mouse is moving and close to window, skipping warp to avoid interrupting transition");
+        return;
+      } else {
+        this.debug_log("Mouse is moving but far from window, will warp");
+      }
+    }
+
+    this.warp_pointer(win);
   }
 
   FocusWorkspace(workspaceId: number): void {
