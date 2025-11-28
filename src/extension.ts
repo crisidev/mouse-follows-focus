@@ -303,7 +303,7 @@ export default class MouseFollowsFocus extends Extension {
     mouseX: number,
     mouseY: number,
     windowRectangle: Mtk.Rectangle,
-    tolerance: number = 5,
+    tolerance = 5,
   ): boolean {
     return (
       mouseX >= windowRectangle.x - tolerance &&
@@ -316,8 +316,8 @@ export default class MouseFollowsFocus extends Extension {
   private has_mouse_moved_recently(
     currentX: number,
     currentY: number,
-    thresholdMs: number = 150,
-    minDistance: number = 3,
+    thresholdMs = 150,
+    minDistance = 3,
   ): boolean {
     const currentTime = GLib.get_monotonic_time();
     const timeDiffMs = (currentTime - this.lastMouseTime) / 1000;
@@ -360,7 +360,7 @@ export default class MouseFollowsFocus extends Extension {
     const windowId = win.get_id();
 
     // Save current position before warping away (as relative offset)
-    const windowToSave = previousWindow || this.currentFocusedWindow;
+    const windowToSave = previousWindow ?? this.currentFocusedWindow;
     if (warpToLastPosition && windowToSave && windowToSave !== win) {
       try {
         const currentWindowId = windowToSave.get_id();
@@ -375,7 +375,7 @@ export default class MouseFollowsFocus extends Extension {
         if (relativeX >= 0 && relativeX <= currentWindowRect.width &&
             relativeY >= 0 && relativeY <= currentWindowRect.height) {
           this.windowLastPositions.set(currentWindowId, { relativeX, relativeY });
-          this.debug_log(`Saved relative position (${relativeX}, ${relativeY}) for window ${currentWindowId} before warping`);
+          this.debug_log(`Saved relative position (${relativeX.toString()}, ${relativeY.toString()}) for window ${currentWindowId.toString()} before warping`);
         }
       } catch (e) {
         this.debug_log(`Error saving current position before warp: ${String(e)}`);
@@ -386,21 +386,27 @@ export default class MouseFollowsFocus extends Extension {
     let targetY: number;
 
     if (warpToLastPosition && this.windowLastPositions.has(windowId)) {
-      const lastPos = this.windowLastPositions.get(windowId)!;
-
-      // Convert relative position back to absolute coordinates
-      targetX = windowRectangle.x + lastPos.relativeX;
-      targetY = windowRectangle.y + lastPos.relativeY;
-
-      // Validate the position is still within window bounds (in case window was resized)
-      if (lastPos.relativeX >= 0 && lastPos.relativeX <= windowRectangle.width &&
-          lastPos.relativeY >= 0 && lastPos.relativeY <= windowRectangle.height) {
-        this.debug_log(`Warping to window ${win.wm_class} last position (${targetX}, ${targetY}) [relative: ${lastPos.relativeX}, ${lastPos.relativeY}]`);
-      } else {
-        // Last position is outside window bounds (window was resized), use center
+      const lastPos = this.windowLastPositions.get(windowId);
+      if (!lastPos) {
+        // Shouldn't happen, but handle it
         targetX = windowRectangle.x + windowRectangle.width / 2;
         targetY = windowRectangle.y + windowRectangle.height / 2;
-        this.debug_log(`Warping to window ${win.wm_class} center (last position out of bounds due to resize)`);
+        this.debug_log(`Warping to window ${win.wm_class} center (no position found)`);
+      } else {
+        // Convert relative position back to absolute coordinates
+        targetX = windowRectangle.x + lastPos.relativeX;
+        targetY = windowRectangle.y + lastPos.relativeY;
+
+        // Validate the position is still within window bounds (in case window was resized)
+        if (lastPos.relativeX >= 0 && lastPos.relativeX <= windowRectangle.width &&
+            lastPos.relativeY >= 0 && lastPos.relativeY <= windowRectangle.height) {
+          this.debug_log(`Warping to window ${win.wm_class} last position (${targetX.toString()}, ${targetY.toString()}) [relative: ${lastPos.relativeX.toString()}, ${lastPos.relativeY.toString()}]`);
+        } else {
+          // Last position is outside window bounds (window was resized), use center
+          targetX = windowRectangle.x + windowRectangle.width / 2;
+          targetY = windowRectangle.y + windowRectangle.height / 2;
+          this.debug_log(`Warping to window ${win.wm_class} center (last position out of bounds due to resize)`);
+        }
       }
     } else {
       // No last position or setting disabled, use center
@@ -508,7 +514,7 @@ export default class MouseFollowsFocus extends Extension {
     // Use larger tolerance for borderless windows
     const hasDecorations = this.window_has_decorations(win);
     const tolerance = hasDecorations ? 5 : 20;
-    this.debug_log(`Window ${hasDecorations ? "has" : "has no"} decorations, using tolerance: ${tolerance}px`);
+    this.debug_log(`Window ${hasDecorations ? "has" : "has no"} decorations, using tolerance: ${tolerance.toString()}px`);
 
     const isWithinWindow = this.cursor_within_window(mouseX, mouseY, windowRectangle, tolerance);
 
