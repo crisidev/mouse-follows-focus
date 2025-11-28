@@ -105,6 +105,12 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
             </child>
           </object>
         </child>
+        <child>
+          <object class="AdwSwitchRow" id="warpToLastPosition">
+            <property name="title" translatable="true">Warp to Last Position</property>
+            <property name="subtitle" translatable="true">Restore last known cursor position in window instead of centering</property>
+          </object>
+        </child>
       </object>
     </child>
   </template>

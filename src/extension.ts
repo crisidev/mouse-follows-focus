@@ -35,7 +35,7 @@ interface Child {
 }
 
 export default class MouseFollowsFocus extends Extension {
-  private connectedWindowsSignals = new Map<number, number>();
+  private connectedWindowsSignals = new Map<number, number[]>();
   private windowCreatedSignal: number | null = null;
   private windowHiddenSignal: number | null = null;
   private motionEventSignal: number | null = null;
@@ -49,6 +49,7 @@ export default class MouseFollowsFocus extends Extension {
   private lastMouseTime = 0;
   private currentFocusedWindow: Meta.Window | null = null;
   private lastActiveMonitorIndex = 0;
+  private windowLastPositions = new Map<number, {relativeX: number, relativeY: number}>();
   private dbus?: Gio.DBusExportedObject | null = null;
   private dbus_interface = `<node>
    <interface name="org.gnome.Shell.Extensions.MouseFollowsFocus">
@@ -150,10 +151,15 @@ export default class MouseFollowsFocus extends Extension {
           GLib.PRIORITY_DEFAULT,
           this.getSettings().get_int("motion-event-timeout"),
           (): boolean => {
+            // Guard against callback executing after disable()
+            if (this.motionEventTimer === null) {
+              return false;
+            }
             this.debug_log(
               `Setting mouse movement guard to false after timeout`,
             );
             this.isMouseMoving = false;
+            this.motionEventTimer = null;
             return false;
           },
         );
@@ -200,20 +206,34 @@ export default class MouseFollowsFocus extends Extension {
       this.motionEventTimer = null;
     }
 
+    // Disconnect all window signals
     for (const actor of global.get_window_actors()) {
       if (actor.is_destroyed()) continue;
 
       const win = actor.get_meta_window();
       if (win) {
-        const connectedWindowSignal = this.connectedWindowsSignals.get(
-          win.get_id(),
-        );
-        if (connectedWindowSignal) {
-          win.disconnect(connectedWindowSignal);
-          this.connectedWindowsSignals.delete(win.get_id());
+        const windowId = win.get_id();
+        const signals = this.connectedWindowsSignals.get(windowId);
+        if (signals) {
+          for (const signalId of signals) {
+            win.disconnect(signalId);
+          }
+          this.connectedWindowsSignals.delete(windowId);
         }
       }
     }
+
+    // Clean up any remaining signal connections for windows that no longer exist
+    this.connectedWindowsSignals.clear();
+
+    // Reset all state
+    this.isMouseMoving = false;
+    this.lastMouseX = 0;
+    this.lastMouseY = 0;
+    this.lastMouseTime = 0;
+    this.currentFocusedWindow = null;
+    this.lastActiveMonitorIndex = 0;
+    this.windowLastPositions.clear();
 
     this.info_log("Deatching dbus interface");
     if (this.dbus) {
@@ -244,12 +264,31 @@ export default class MouseFollowsFocus extends Extension {
       return;
     }
 
-    this.connectedWindowsSignals.set(
-      win.get_id(),
+    const windowId = win.get_id();
+    const signals: number[] = [];
+
+    // Connect to focus signal
+    signals.push(
       win.connect("focus", () => {
         this.focus_changed(win);
-      }),
+      })
     );
+
+    // Connect to unmanaged signal to clean up stored positions
+    signals.push(
+      win.connect("unmanaged", () => {
+        this.debug_log(`Window unmanaged, cleaning up`);
+        this.windowLastPositions.delete(windowId);
+        this.connectedWindowsSignals.delete(windowId);
+
+        // Clear currentFocusedWindow if this was it
+        if (this.currentFocusedWindow?.get_id() === windowId) {
+          this.currentFocusedWindow = null;
+        }
+      })
+    );
+
+    this.connectedWindowsSignals.set(windowId, signals);
   }
 
   private get_window_actor(win: Meta.Window): Meta.WindowActor | undefined {
@@ -315,15 +354,64 @@ export default class MouseFollowsFocus extends Extension {
     });
   }
 
-  private warp_pointer(win: Meta.Window): void {
-    this.debug_log(`Warping to window ${win.wm_class} center`);
+  private warp_pointer(win: Meta.Window, previousWindow: Meta.Window | null = null): void {
     const windowRectangle = win.get_buffer_rect();
+    const warpToLastPosition = this.getSettings().get_boolean("warp-to-last-position");
+    const windowId = win.get_id();
+
+    // Save current position before warping away (as relative offset)
+    const windowToSave = previousWindow || this.currentFocusedWindow;
+    if (warpToLastPosition && windowToSave && windowToSave !== win) {
+      try {
+        const currentWindowId = windowToSave.get_id();
+        const [mouseX, mouseY] = global.get_pointer();
+        const currentWindowRect = windowToSave.get_buffer_rect();
+
+        // Calculate relative position within the window
+        const relativeX = mouseX - currentWindowRect.x;
+        const relativeY = mouseY - currentWindowRect.y;
+
+        // Save position if within current window bounds
+        if (relativeX >= 0 && relativeX <= currentWindowRect.width &&
+            relativeY >= 0 && relativeY <= currentWindowRect.height) {
+          this.windowLastPositions.set(currentWindowId, { relativeX, relativeY });
+          this.debug_log(`Saved relative position (${relativeX}, ${relativeY}) for window ${currentWindowId} before warping`);
+        }
+      } catch (e) {
+        this.debug_log(`Error saving current position before warp: ${String(e)}`);
+      }
+    }
+
+    let targetX: number;
+    let targetY: number;
+
+    if (warpToLastPosition && this.windowLastPositions.has(windowId)) {
+      const lastPos = this.windowLastPositions.get(windowId)!;
+
+      // Convert relative position back to absolute coordinates
+      targetX = windowRectangle.x + lastPos.relativeX;
+      targetY = windowRectangle.y + lastPos.relativeY;
+
+      // Validate the position is still within window bounds (in case window was resized)
+      if (lastPos.relativeX >= 0 && lastPos.relativeX <= windowRectangle.width &&
+          lastPos.relativeY >= 0 && lastPos.relativeY <= windowRectangle.height) {
+        this.debug_log(`Warping to window ${win.wm_class} last position (${targetX}, ${targetY}) [relative: ${lastPos.relativeX}, ${lastPos.relativeY}]`);
+      } else {
+        // Last position is outside window bounds (window was resized), use center
+        targetX = windowRectangle.x + windowRectangle.width / 2;
+        targetY = windowRectangle.y + windowRectangle.height / 2;
+        this.debug_log(`Warping to window ${win.wm_class} center (last position out of bounds due to resize)`);
+      }
+    } else {
+      // No last position or setting disabled, use center
+      targetX = windowRectangle.x + windowRectangle.width / 2;
+      targetY = windowRectangle.y + windowRectangle.height / 2;
+      this.debug_log(`Warping to window ${win.wm_class} center`);
+    }
+
     Clutter.get_default_backend()
       .get_default_seat()
-      .warp_pointer(
-        windowRectangle.x + windowRectangle.width / 2,
-        windowRectangle.y + windowRectangle.height / 2,
-      );
+      .warp_pointer(targetX, targetY);
   }
 
   private focus_changed(win: Meta.Window | null): void {
@@ -347,11 +435,6 @@ export default class MouseFollowsFocus extends Extension {
       return;
     }
 
-    // Update current focused window
-    this.currentFocusedWindow = win;
-
-    const [mouseX, mouseY] = global.get_pointer();
-
     const actor = this.get_window_actor(win);
     if (!actor) {
       this.debug_log("Focus change skipped due to invalid window actor");
@@ -365,6 +448,13 @@ export default class MouseFollowsFocus extends Extension {
       return;
     }
 
+    // Store previous window before updating
+    const previousWindow = this.currentFocusedWindow;
+
+    // Update current focused window AFTER validation
+    this.currentFocusedWindow = win;
+
+    const [mouseX, mouseY] = global.get_pointer();
     const windowRectangle = win.get_buffer_rect();
     const sourceMonitorIndex = global.display.get_monitor_index_for_rect(
       new Mtk.Rectangle({ x: mouseX, y: mouseY, width: 1, height: 1 }),
@@ -399,13 +489,15 @@ export default class MouseFollowsFocus extends Extension {
 
       // Update last active monitor when we actually warp
       this.lastActiveMonitorIndex = destinationMonitorIndex;
-      this.warp_pointer(win);
+      this.warp_pointer(win, previousWindow);
       return;
     }
 
     const monitor = global.display.get_monitor_geometry(destinationMonitorIndex);
     const monitorHeight = monitor.y + monitor.height;
-    if (mouseY < this.topBarHeight) {
+    const monitorTop = monitor.y;
+
+    if (mouseY < monitorTop + this.topBarHeight) {
       this.debug_log("Over the top bar, ignoring event.");
       return;
     } else if (mouseY > monitorHeight - this.bottomBarHeight) {
@@ -451,7 +543,7 @@ export default class MouseFollowsFocus extends Extension {
       }
     }
 
-    this.warp_pointer(win);
+    this.warp_pointer(win, previousWindow);
   }
 
   FocusWorkspace(workspaceId: number): void {

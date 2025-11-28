@@ -26,5 +26,10 @@
       <summary>Bottom bar heigh</summary>
       <description>Do not track mouse on the last N pixels from the bottom (0 to disable).</description>
     </key>
+    <key name="warp-to-last-position" type="b">
+      <default>false</default>
+      <summary>Warp to last position</summary>
+      <description>When warping the mouse to a window, restore the last known position in that window instead of always centering.</description>
+    </key>
   </schema>
 </schemalist>
