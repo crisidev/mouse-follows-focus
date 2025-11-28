@@ -48,6 +48,7 @@ export default class MouseFollowsFocus extends Extension {
   private lastMouseY = 0;
   private lastMouseTime = 0;
   private currentFocusedWindow: Meta.Window | null = null;
+  private lastActiveMonitorIndex = 0;
   private dbus?: Gio.DBusExportedObject | null = null;
   private dbus_interface = `<node>
    <interface name="org.gnome.Shell.Extensions.MouseFollowsFocus">
@@ -63,6 +64,9 @@ export default class MouseFollowsFocus extends Extension {
 
   override enable(): void {
     this.info_log("Enabling extension");
+
+    // Initialize to primary monitor
+    this.lastActiveMonitorIndex = global.display.get_primary_monitor();
 
     this.info_log("Registering dbus interface");
     this.dbus = Gio.DBusExportedObject.wrapJSObject(this.dbus_interface, this);
@@ -88,6 +92,26 @@ export default class MouseFollowsFocus extends Extension {
       (_source, win) => {
         this.debug_log(`Window "${win.get_title()}" created`);
         this.connect_to_window(win);
+
+        // If a new window is created and we previously stayed on primary monitor,
+        // warp the mouse back to help with window placement
+        const primaryMonitor = global.display.get_primary_monitor();
+        const [mouseX, mouseY] = global.get_pointer();
+        const currentMonitorIndex = global.display.get_monitor_index_for_rect(
+          new Mtk.Rectangle({ x: mouseX, y: mouseY, width: 1, height: 1 }),
+        );
+
+        if (this.lastActiveMonitorIndex === primaryMonitor && currentMonitorIndex !== primaryMonitor) {
+          this.debug_log("New window created, warping mouse back to primary monitor");
+          // Get the center of the primary monitor
+          const primaryMonitorGeom = global.display.get_monitor_geometry(primaryMonitor);
+          Clutter.get_default_backend()
+            .get_default_seat()
+            .warp_pointer(
+              primaryMonitorGeom.x + primaryMonitorGeom.width / 2,
+              primaryMonitorGeom.y + primaryMonitorGeom.height / 2,
+            );
+        }
       },
     );
     this.info_log(
@@ -280,6 +304,17 @@ export default class MouseFollowsFocus extends Extension {
            frameRect.height !== bufferRect.height;
   }
 
+  private has_windows_on_workspace_monitor(workspace: Meta.Workspace, monitorIndex: number): boolean {
+    const windows = workspace.list_windows();
+    return windows.some(win => {
+      if (win.get_window_type() !== Meta.WindowType.NORMAL) {
+        return false;
+      }
+      const winMonitor = win.get_monitor();
+      return winMonitor === monitorIndex;
+    });
+  }
+
   private warp_pointer(win: Meta.Window): void {
     this.debug_log(`Warping to window ${win.wm_class} center`);
     const windowRectangle = win.get_buffer_rect();
@@ -345,6 +380,25 @@ export default class MouseFollowsFocus extends Extension {
 
     if (sourceMonitorIndex !== destinationMonitorIndex) {
       this.debug_log("Focus switched to a different monitor");
+
+      const primaryMonitor = global.display.get_primary_monitor();
+      const activeWorkspace = global.workspace_manager.get_active_workspace();
+
+      // Check if we're moving from primary to secondary monitor
+      if (sourceMonitorIndex === primaryMonitor && destinationMonitorIndex !== primaryMonitor) {
+        // Check if there are still windows on the primary monitor's active workspace
+        const hasWindowsOnPrimary = this.has_windows_on_workspace_monitor(activeWorkspace, primaryMonitor);
+
+        if (!hasWindowsOnPrimary) {
+          this.debug_log("No windows left on primary monitor workspace, not warping to secondary");
+          // Store that we want to stay on primary monitor
+          this.lastActiveMonitorIndex = primaryMonitor;
+          return;
+        }
+      }
+
+      // Update last active monitor when we actually warp
+      this.lastActiveMonitorIndex = destinationMonitorIndex;
       this.warp_pointer(win);
       return;
     }
