@@ -49,6 +49,9 @@ export default class MouseFollowsFocus extends Extension {
   private lastMouseTime = 0;
   private currentFocusedWindow: Meta.Window | null = null;
   private lastActiveMonitorIndex = 0;
+  private pendingFocusWindow: Meta.Window | null = null;
+  private focusFollowsMouseTimer: number | null = null;
+  private focusFollowsMouseEnabled = false;
   private windowLastPositions = new Map<number, {relativeX: number, relativeY: number}>();
   private dbus?: Gio.DBusExportedObject | null = null;
   private dbus_interface = `<node>
@@ -68,6 +71,12 @@ export default class MouseFollowsFocus extends Extension {
 
     // Initialize to primary monitor
     this.lastActiveMonitorIndex = global.display.get_primary_monitor();
+
+    // Enable focus-follows-mouse supplement when GNOME's focus-mode is 'mouse' or 'sloppy'
+    const wmPrefs = new Gio.Settings({ schema: "org.gnome.desktop.wm.preferences" });
+    const focusMode = wmPrefs.get_string("focus-mode");
+    this.focusFollowsMouseEnabled = focusMode !== "click";
+    this.info_log(`GNOME focus-mode: ${focusMode}, focus-follows-mouse supplement: ${this.focusFollowsMouseEnabled.toString()}`);
 
     this.info_log("Registering dbus interface");
     this.dbus = Gio.DBusExportedObject.wrapJSObject(this.dbus_interface, this);
@@ -93,6 +102,15 @@ export default class MouseFollowsFocus extends Extension {
       (_source, win) => {
         this.debug_log(`Window "${win.get_title()}" created`);
         this.connect_to_window(win);
+
+        // Only apply warp-back logic for normal windows.
+        // Firefox (and other apps) create transient non-normal windows (tooltips,
+        // dropdowns, popups) that would incorrectly trigger this warp.
+        const windowType = win.get_window_type();
+        if (windowType !== Meta.WindowType.NORMAL) {
+          this.debug_log(`Skipping warp-back for non-normal window type ${windowType.toString()}`);
+          return;
+        }
 
         // If a new window is created and we previously stayed on primary monitor,
         // warp the mouse back to help with window placement
@@ -140,31 +158,76 @@ export default class MouseFollowsFocus extends Extension {
 
       if (!this.isMouseMoving) {
         this.debug_log("Setting mouse movement guard to true");
-        this.isMouseMoving = true;
+      }
+      this.isMouseMoving = true;
 
-        if (this.motionEventTimer) {
-          this.debug_log("Removing mouse movement reset timer");
-          GLib.Source.remove(this.motionEventTimer);
-        }
+      // Reset the timer on every motion event so isMouseMoving stays true
+      // for the entire duration of movement and only becomes false after
+      // the timeout elapses with no further motion events.
+      if (this.motionEventTimer) {
+        GLib.Source.remove(this.motionEventTimer);
+      }
 
-        this.motionEventTimer = GLib.timeout_add(
-          GLib.PRIORITY_DEFAULT,
-          this.getSettings().get_int("motion-event-timeout"),
-          (): boolean => {
-            // Guard against callback executing after disable()
-            if (this.motionEventTimer === null) {
-              return false;
-            }
-            this.debug_log(
-              `Setting mouse movement guard to false after timeout`,
-            );
-            this.isMouseMoving = false;
-            this.motionEventTimer = null;
+      this.motionEventTimer = GLib.timeout_add(
+        GLib.PRIORITY_DEFAULT,
+        this.getSettings().get_int("motion-event-timeout"),
+        (): boolean => {
+          // Guard against callback executing after disable()
+          if (this.motionEventTimer === null) {
             return false;
-          },
-        );
-      } else {
-        this.debug_log("Mouse movement guard already set");
+          }
+          this.debug_log(
+            `Setting mouse movement guard to false after timeout`,
+          );
+          this.isMouseMoving = false;
+          this.motionEventTimer = null;
+          return false;
+        },
+      );
+
+      // Supplement GNOME's focus-follows-mouse for slow mouse movements.
+      // Mutter can miss focus changes at window boundaries with slow movement;
+      // this detects the window under the cursor and focuses it after a short dwell.
+      /* eslint-disable @typescript-eslint/no-unsafe-member-access */
+      if (this.focusFollowsMouseEnabled && !overview.visible) {
+        /* eslint-enable @typescript-eslint/no-unsafe-member-access */
+        const windowUnderCursor = this.get_window_at_position(mouseX, mouseY);
+
+        if (windowUnderCursor && windowUnderCursor !== this.currentFocusedWindow) {
+          // New target window — start debounce timer (only if target changed)
+          if (windowUnderCursor !== this.pendingFocusWindow) {
+            this.pendingFocusWindow = windowUnderCursor;
+
+            if (this.focusFollowsMouseTimer) {
+              GLib.Source.remove(this.focusFollowsMouseTimer);
+            }
+
+            this.focusFollowsMouseTimer = GLib.timeout_add(
+              GLib.PRIORITY_DEFAULT,
+              50,
+              (): boolean => {
+                if (this.focusFollowsMouseTimer === null) return false;
+
+                const target = this.pendingFocusWindow;
+                if (target && target !== this.currentFocusedWindow) {
+                  this.debug_log(`Focus-follows-mouse: focusing "${target.get_title()}"`);
+                  target.focus(global.get_current_time());
+                }
+
+                this.pendingFocusWindow = null;
+                this.focusFollowsMouseTimer = null;
+                return false;
+              },
+            );
+          }
+        } else {
+          // Mouse is over the focused window or empty space — cancel pending focus
+          if (this.focusFollowsMouseTimer) {
+            GLib.Source.remove(this.focusFollowsMouseTimer);
+            this.focusFollowsMouseTimer = null;
+          }
+          this.pendingFocusWindow = null;
+        }
       }
     });
     this.info_log(
@@ -206,6 +269,12 @@ export default class MouseFollowsFocus extends Extension {
       this.motionEventTimer = null;
     }
 
+    if (this.focusFollowsMouseTimer) {
+      GLib.Source.remove(this.focusFollowsMouseTimer);
+      this.focusFollowsMouseTimer = null;
+    }
+    this.pendingFocusWindow = null;
+
     // Disconnect all window signals
     for (const actor of global.get_window_actors()) {
       if (actor.is_destroyed()) continue;
@@ -233,6 +302,7 @@ export default class MouseFollowsFocus extends Extension {
     this.lastMouseTime = 0;
     this.currentFocusedWindow = null;
     this.lastActiveMonitorIndex = 0;
+    this.focusFollowsMouseEnabled = false;
     this.windowLastPositions.clear();
 
     this.info_log("Deatching dbus interface");
@@ -341,6 +411,30 @@ export default class MouseFollowsFocus extends Extension {
            frameRect.y !== bufferRect.y ||
            frameRect.width !== bufferRect.width ||
            frameRect.height !== bufferRect.height;
+  }
+
+  private get_window_at_position(x: number, y: number): Meta.Window | null {
+    const activeWorkspace = global.workspace_manager.get_active_workspace();
+    const actors = global.get_window_actors();
+
+    // Iterate in reverse for top-most-first stacking order
+    for (let i = actors.length - 1; i >= 0; i--) {
+      const actor = actors[i]!;
+      if (actor.is_destroyed()) continue;
+
+      const win = actor.get_meta_window();
+      if (!win) continue;
+      if (win.get_window_type() !== Meta.WindowType.NORMAL) continue;
+      if (win.minimized) continue;
+      if (!win.located_on_workspace(activeWorkspace)) continue;
+
+      const rect = win.get_buffer_rect();
+      if (x >= rect.x && x <= rect.x + rect.width &&
+          y >= rect.y && y <= rect.y + rect.height) {
+        return win;
+      }
+    }
+    return null;
   }
 
   private has_windows_on_workspace_monitor(workspace: Meta.Workspace, monitorIndex: number): boolean {
@@ -538,7 +632,7 @@ export default class MouseFollowsFocus extends Extension {
     // Only skip warp if mouse is moving AND close to the window (within extended tolerance)
     const isMoving = this.isMouseMoving || this.has_mouse_moved_recently(mouseX, mouseY);
     if (isMoving) {
-      const extendedTolerance = hasDecorations ? 10 : 40;
+      const extendedTolerance = hasDecorations ? 10 : 15;
       const isCloseToWindow = this.cursor_within_window(mouseX, mouseY, windowRectangle, extendedTolerance);
 
       if (isCloseToWindow) {
