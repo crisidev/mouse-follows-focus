@@ -419,7 +419,8 @@ export default class MouseFollowsFocus extends Extension {
 
     // Iterate in reverse for top-most-first stacking order
     for (let i = actors.length - 1; i >= 0; i--) {
-      const actor = actors[i]!;
+      const actor = actors[i];
+      if (!actor) continue;
       if (actor.is_destroyed()) continue;
 
       const win = actor.get_meta_window();
@@ -514,6 +515,7 @@ export default class MouseFollowsFocus extends Extension {
       .warp_pointer(targetX, targetY);
   }
 
+  // eslint-disable-next-line complexity
   private focus_changed(win: Meta.Window | null): void {
     if (!win) {
       this.debug_log("Focus change skipped due to empty window object");
