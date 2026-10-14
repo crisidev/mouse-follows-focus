@@ -27,7 +27,6 @@ import Meta from "gi://Meta";
 import GLib from "gi://GLib";
 import Mtk from "gi://Mtk";
 import Gio from "gi://Gio";
-import Clutter from "gi://Clutter";
 import { NotificationDestroyedReason, Source } from "resource:///org/gnome/shell/ui/messageTray.js";
 
 interface Child {
@@ -124,7 +123,7 @@ export default class MouseFollowsFocus extends Extension {
           this.debug_log("New window created, warping mouse back to primary monitor");
           // Get the center of the primary monitor
           const primaryMonitorGeom = global.display.get_monitor_geometry(primaryMonitor);
-          Clutter.get_default_backend()
+          global.stage.context.get_backend()
             .get_default_seat()
             .warp_pointer(
               primaryMonitorGeom.x + primaryMonitorGeom.width / 2,
@@ -510,7 +509,7 @@ export default class MouseFollowsFocus extends Extension {
       this.debug_log(`Warping to window ${win.wm_class} center`);
     }
 
-    Clutter.get_default_backend()
+    global.stage.context.get_backend()
       .get_default_seat()
       .warp_pointer(targetX, targetY);
   }
